@@ -19,7 +19,7 @@ export default function RegisterPage() {
             setEmail('');
             setPassword('');
         }
-        catch (err){
+        catch (err) {
             setMessage(`Registration failed`);
             
             setName('');
