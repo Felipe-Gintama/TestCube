@@ -16,3 +16,10 @@ export async function findUserByEmail(email: string) {
     );
     return result.rows[0];
 }
+
+export async function findUserById(id: number) {
+    const result = await pool.query(
+        'SELECT id, name, email, role FROM users WHERE id=$1', [id]
+    );
+  return result.rows[0];
+}
