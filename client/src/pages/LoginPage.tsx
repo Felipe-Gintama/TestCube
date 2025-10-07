@@ -31,11 +31,16 @@ export default function LoginPage() {
     }
 
     return (
-        <form onSubmit={handleSubmit}>
-            <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}/>
-            <input placeholder="Password" value={password} type="password" onChange={e => setPassword(e.target.value)}/>
-            <button type="submit">Login</button>
-            <p>{message}</p>
-        </form>
+        <>
+            <form onSubmit={handleSubmit}>
+                <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}/>
+                <input placeholder="Password" value={password} type="password" onChange={e => setPassword(e.target.value)}/>
+                <button type="submit">Login</button>
+                <p>{message}</p>
+            </form>
+            <div className="bg-red-500 text-white p-4">
+                Tailwind działa!
+            </div>
+        </>
     );
 }

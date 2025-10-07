@@ -29,9 +29,9 @@ export default function DashboardPage() {
 
     return (
         <div>
-        <h1>Welcome, {user.email}!</h1>
-        <p>Your role: {user.role}</p>
-        <button onClick={handleLogout}>Logout</button>
+            <h1>Welcome, {user.email}!</h1>
+            <p>Your role: {user.role}</p>
+            <button onClick={handleLogout}>Logout</button>
         </div>
     );
 }
