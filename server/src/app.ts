@@ -1,6 +1,6 @@
 import express from 'express';
 import { corsMiddleware } from './middlewares/cors';
-import testCaseRoutes from './modules/testcases/routes';
+import testCaseRoutes from './modules/test_cases/test_cases.routes';
 //import cors from 'cors';
 
 export const app = express();
@@ -9,4 +9,4 @@ export const app = express();
 app.use(express.json());
 
 // rejestracja modułów
-app.use('/testcases', testCaseRoutes);
+app.use('/test_cases', testCaseRoutes);

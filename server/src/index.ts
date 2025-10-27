@@ -32,6 +32,7 @@
 import express from 'express';
 import usersRouter from './modules/users/users.routes';
 import authRouter from './modules/auth/auth.routes';
+import testCasesRouter from './modules/test_cases/test_cases.routes';
 import cors from 'cors';
 
 const app = express();
@@ -40,6 +41,7 @@ app.use(express.json());
 
 app.use('/api/users', usersRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/test_cases', testCasesRouter);
 
 app.listen(4000, () => console.log('Server running on http://localhost:4000'));
 
