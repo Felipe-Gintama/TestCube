@@ -13,8 +13,8 @@ export async function addTestCase(title: string, description: string, expected_r
 
   const result = await pool.query(
     `INSERT INTO test_cases (title, description, expected_result, project_id, created_by, status)
-     VALUES ($1, $2, $3, $4, $5, 'draft')
-     RETURNING *`,
+    VALUES ($1, $2, $3, $4, $5, 'draft')
+    RETURNING *`,
     [title, description, expected_result, project_id, userId]
   );
 
@@ -37,5 +37,5 @@ export async function getAllTestCases() {
   const result = await pool.query(
     `SELECT * FROM test_cases`
   );
-  return result.rows[0];
+  return result.rows;
 }

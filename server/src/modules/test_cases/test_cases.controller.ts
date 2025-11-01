@@ -13,12 +13,10 @@ export async function getTestCases(_req: Request, res: Response) {
 }
 
 export async function createTestCase(req: AuthRequest, res: Response) {
+
   if (!req.user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
-
-  console.log("REQ USER:", req.user);
-  console.log("REQ BODY:", req.body);
 
   try {
     const userId = req.user.userId;
@@ -37,11 +35,7 @@ export async function updateTestCase(req: AuthRequest, res: Response) {
       return res.status(401).json({ error: "Unauthorized" });
     }
   
-    console.log("REQ USER:", req.user);
-    console.log("REQ BODY:", req.body);
-
   try {
-    //const userId = req.user.userId;
     const idParam = req.params.id;
     if (!idParam) {
       return res.status(400).json({ error: "ID is required" });
@@ -59,7 +53,7 @@ export async function updateTestCase(req: AuthRequest, res: Response) {
 }
 
 export async function getUserTestCases(req: AuthRequest, res: Response) {
-  if (!req.user) {
+    if (!req.user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     
