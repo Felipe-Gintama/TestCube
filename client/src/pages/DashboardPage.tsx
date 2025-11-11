@@ -1,42 +1,41 @@
-import { useEffect, useState } from "react";
-import { useNavigate, NavLink } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 export default function DashboardPage() {
-    const [user, setUser] = useState<any>(null);
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
-        fetch("http://localhost:4000/api/auth/me", {
-        method: "GET",  
-        mode: "cors",
-        headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((res) => res.json())
-        .then((data) => setUser(data.user))
-        .catch(() => console.error("Unauthorized"));
-    }, []);
-    
-    function handleLogout() {
-        localStorage.removeItem("token");
-        setUser(null);
-        navigate("/login");
-    }
-
-    if (!user) return <p>Loading...</p>;
 
     return (
-        <div>
-            <NavLink to="/projects" className="hidden md:inline-block bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition">
-                Projects
-            </NavLink>
-            <h1>Welcome, {user.email}!</h1>
-            <p>Your role: {user.role}</p>
-            <a className="cursor:pointer">
-                <button onClick={handleLogout} className="hidden md:inline-block bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition">Logout</button>
-            </a>
+        // <div>
+        //     <NavLink to="/projects" className="hidden md:inline-block bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition">
+        //         Projects
+        //     </NavLink>
+        //     <h1>Welcome, {user.email}!</h1>
+        //     <p>Your role: {user.role}</p>
+        //     <a className="cursor:pointer">
+        //         <button onClick={handleLogout} className="hidden md:inline-block bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition">Logout</button>
+        //     </a>
+        // </div>
+        <div className="flex min-h-screen bg-gray-200">
+            <aside className="w-64 bg-gray-100 text-black flex flex-col p-4">
+                <nav className="flex flex-col gap-2">
+
+                <NavLink to="/projects" className={({ isActive }) =>`p-2 rounded-md hover:bg-gray-200 transition ${isActive ? "bg-gray-300 font-semibold" : ""}`}>
+                    Projects 
+                </NavLink>
+                <NavLink to="/raports" className={({ isActive }) =>`p-2 rounded-md hover:bg-gray-200 transition ${isActive ? "bg-gray-800 font-semibold" : ""}`}>
+                    Raports
+                </NavLink>
+                <NavLink to="/testcases" className={({ isActive }) =>`p-2 rounded-md hover:bg-gray-200 transition ${isActive ? "bg-gray-800 font-semibold" : ""}`}>
+                    Testing
+                </NavLink>
+                <NavLink to="/roles" className={({ isActive }) =>`p-2 rounded-md hover:bg-gray-200 transition ${isActive ? "bg-gray-800 font-semibold" : ""}`}>
+                    User management
+                </NavLink>
+                <NavLink to="/testCasesManagement" className={({ isActive }) =>`p-2 rounded-md hover:bg-gray-200 transition ${isActive ? "bg-gray-800 font-semibold" : ""}`}>
+                    Add/Delete test cases
+                </NavLink>
+                </nav>
+            </aside>
+            <main>
+            </main>
         </div>
     );
 }

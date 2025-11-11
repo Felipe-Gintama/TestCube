@@ -3,9 +3,7 @@ import { pool } from '../../config/db'
 export async function GetAllUserProjects(userId: number) {
 
     const result = await pool.query(
-        `SELECT DISTINCT * FROM projects p 
-        LEFT JOIN project_members pm ON p.id = pm.project_id
-        WHERE p.created_by = $1 OR pm.user_id = $1`,
+        `SELECT * FROM projects WHERE created_by = $1`,
         [userId]
     );
 

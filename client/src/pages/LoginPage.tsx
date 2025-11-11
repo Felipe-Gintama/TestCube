@@ -15,8 +15,8 @@ export default function LoginPage() {
         try {
             const data = await loginUser(email, password);
             localStorage.setItem("token", data.token);
+            
             setMessage(`Login successful: ${data.token}`);
-
             setEmail('');
             setPassword('');
             
@@ -38,9 +38,6 @@ export default function LoginPage() {
                 <button type="submit">Login</button>
                 <p>{message}</p>
             </form>
-            <div className="bg-red-500 text-white p-4">
-                Tailwind działa!
-            </div>
         </>
     );
 }

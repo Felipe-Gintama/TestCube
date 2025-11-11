@@ -1,9 +1,12 @@
-import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import MainLayout from './layouts/MainLayout';
 import ProjectsPage from './pages/ProjectsPage';
+import NewProjectForm from './pages/NewProjectForm';
+import AddMemberToProject from './pages/AddMemberToProject';
+import TestCasesPage from './pages/TestCasesManagemet';
 
 export default function App() {
   const token = localStorage.getItem("token");
@@ -20,7 +23,14 @@ export default function App() {
         {/* securited */}
         <Route element={ token ? <MainLayout /> : <Navigate to="/login" replace />}>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
+
+          {/* project manage*/}
+          <Route path="/projects" element={<ProjectsPage />}>
+            <Route path="new" element={<NewProjectForm />} />
+            <Route path="members" element={<AddMemberToProject />} />
+          </Route>
+          
+          <Route path="/testCasesManagement" element={<TestCasesPage />} />
         </Route>
 
         {/* redirect */}

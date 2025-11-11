@@ -23,3 +23,10 @@ export async function findUserById(id: number) {
     );
   return result.rows[0];
 }
+
+export async function getAllUsers() {
+    const result = await pool.query(
+        'SELECT * FROM users'
+    );
+  return result.rows;
+}
