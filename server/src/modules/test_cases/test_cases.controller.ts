@@ -20,8 +20,8 @@ export async function createTestCase(req: AuthRequest, res: Response) {
 
   try {
     const userId = req.user.userId;
-    const { title, description, expected_result, project_id } = req.body;
-    const newCase = await addTestCase( title, description, expected_result, project_id, userId );
+    const { title, description, expected_result, project_id, group_id } = req.body;
+    const newCase = await addTestCase( title, description, expected_result, project_id, group_id, userId );
     res.status(201).json(newCase);
   }
   catch (error) {

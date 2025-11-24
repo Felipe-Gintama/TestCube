@@ -11,6 +11,7 @@ export default function TestCasesPage() {
   const [allOpen, setAllOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<TestGroupNode | null>(null);
   const [selectedTestCase, setSelectedTestCase] = useState<TestCaseItem | null>(null);
+  const [addingTestToGroup, setAddingTestToGroup] = useState<TestGroupNode | null>(null);
   const [showAddRootForm, setShowAddRootForm] = useState(false);
 
   const token = localStorage.getItem("token");
@@ -18,7 +19,6 @@ export default function TestCasesPage() {
 
   useEffect(() => {
     if (!token) return;
-
     fetchFullTree(projectId, token)
       .then((rows) => setTree(buildTestTree(rows)))
       .catch((err) => console.error(err));
@@ -37,11 +37,13 @@ export default function TestCasesPage() {
     setSelectedGroup(updatedGroup);
   };
 
-  const addSubgroupToTree = (parentId: number, newGroup: TestGroupNode, nodes: TestGroupNode[]): TestGroupNode[] => {
+  const addSubgroupToTree = (
+    parentId: number,
+    newGroup: TestGroupNode,
+    nodes: TestGroupNode[]
+  ): TestGroupNode[] => {
     return nodes.map((node) => {
-      if (node.id === parentId) {
-        return { ...node, children: [...node.children, newGroup] };
-      }
+      if (node.id === parentId) return { ...node, children: [...node.children, newGroup] };
       return { ...node, children: addSubgroupToTree(parentId, newGroup, node.children) };
     });
   };
@@ -53,6 +55,16 @@ export default function TestCasesPage() {
     };
     setTree((prev) => prev.map(removeNode).filter(Boolean) as TestGroupNode[]);
     setSelectedGroup(null);
+  };
+
+  const handleAddTestToTree = (groupId: number, newTest: TestCaseItem) => {
+    const addTestNode = (node: TestGroupNode): TestGroupNode => {
+      if (node.id === groupId) {
+        return { ...node, cases: [...node.cases, newTest] };
+      }
+      return { ...node, children: node.children.map(addTestNode) };
+    };
+    setTree((prev) => prev.map(addTestNode));
   };
 
   return (
@@ -91,7 +103,7 @@ export default function TestCasesPage() {
             key="add-root-form"
             mode="add-root"
             onAddRootGroup={(newGroup) => {
-              const newNode = { ...newGroup, children: [] };
+              const newNode = { ...newGroup, children: [], cases: [] };
               setTree((prev) => [...prev, newNode]);
               setSelectedGroup(newNode);
               setShowAddRootForm(false);
@@ -101,7 +113,7 @@ export default function TestCasesPage() {
 
         {!showAddRootForm && (
           <>
-            {selectedGroup && (
+            {selectedGroup && !addingTestToGroup && (
               <GroupEditForm
                 key={selectedGroup.id}
                 group={selectedGroup}
@@ -111,22 +123,39 @@ export default function TestCasesPage() {
                 onAddSubgroup={(parentId, newGroup) => {
                   const newTree = addSubgroupToTree(
                     parentId,
-                    { ...newGroup, children: [] },
+                    { ...newGroup, children: [], cases: [] },
                     tree
                   );
                   setTree(newTree);
-                  setSelectedGroup({ ...newGroup, children: [] });
+                  setSelectedGroup({ ...newGroup, children: [], cases: [] });
+                }}
+                onAddTest={(group) => setAddingTestToGroup(group)}
+              />
+            )}
+
+            {addingTestToGroup && (
+              <EditTestCaseForm
+                key={addingTestToGroup.id}
+                testCaseId={null}
+                token={token}
+                groupId={addingTestToGroup.id}
+                onSaved={(newTest: TestCaseItem) => {
+                  handleAddTestToTree(addingTestToGroup.id, newTest);
+                  setAddingTestToGroup(null);
                 }}
               />
             )}
-            {!selectedGroup && selectedTestCase && (
+
+            {!selectedGroup && !addingTestToGroup && selectedTestCase && (
               <EditTestCaseForm
                 testCaseId={selectedTestCase.id}
                 token={token}
+                groupId={selectedTestCase.id} 
                 onSaved={() => alert("Zapisano!")}
               />
             )}
-            {!selectedGroup && !selectedTestCase && (
+
+            {!selectedGroup && !selectedTestCase && !addingTestToGroup && (
               <div className="text-gray-600">
                 Wybierz grupę lub przypadek testowy, aby edytować
               </div>

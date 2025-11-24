@@ -11,6 +11,7 @@ export default function GroupEditForm({
   onDelete,
   onAddSubgroup,
   onAddRootGroup,
+  onAddTest,
 }: {
   group?: TestGroupNode;
   mode?: Mode;
@@ -19,6 +20,7 @@ export default function GroupEditForm({
   onDelete?: (groupId: number) => void;
   onAddSubgroup?: (parentGroupId: number, newGroup: TestGroupNode) => void;
   onAddRootGroup?: (newGroup: TestGroupNode) => void;
+  onAddTest?: (group: TestGroupNode) => void;
 }) {
 
   if (mode === "edit" && !group) return <div className="text-gray-600">Brak wybranej grupy</div>;
@@ -37,7 +39,6 @@ export default function GroupEditForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
     const token = localStorage.getItem("token");
     if (!token) return;
 
@@ -115,18 +116,15 @@ export default function GroupEditForm({
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!res.ok) throw new Error("Delete failed");
 
       setMessage("Grupa została usunięta");
-
       if (onDelete) onDelete(group.id);
     } catch (err) {
       console.error(err);
       alert("Nie udało się usunąć grupy");
     }
   }
-
 
   async function handleAddSubgroup(e: React.FormEvent) {
     e.preventDefault();
@@ -146,12 +144,10 @@ export default function GroupEditForm({
           description: newSubgroupDesc.trim() || null,
         }),
       });
-
       if (!res.ok) throw new Error("Add subgroup failed");
       const newGroup = await res.json();
 
       if (onAddSubgroup) onAddSubgroup(group.id, newGroup);
-
       setNewSubgroupName("");
       setNewSubgroupDesc("");
       setShowAddForm(false);
@@ -172,38 +168,36 @@ export default function GroupEditForm({
 
       <label className="block mb-2">
         Nazwa
-        <input
-          className="w-full border p-2 rounded"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        <input className="w-full border p-2 rounded" value={name} onChange={(e) => setName(e.target.value)} />
       </label>
 
       <label className="block mb-2">
         Opis
-        <textarea
-          className="w-full border p-2 rounded"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
+        <textarea className="w-full border p-2 rounded" value={description} onChange={(e) => setDescription(e.target.value)} />
       </label>
 
       <div className="flex gap-2 mt-3">
-        <button
-          type="submit"
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 cursor-pointer"
-        >
+        <button type="submit" className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 cursor-pointer">
           {isEdit ? "Zapisz zmiany" : "Dodaj grupę"}
         </button>
 
         {isEdit && (
-          <button
-            type="button"
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 cursor-pointer"
-            onClick={() => handleDelete()}
-          >
-            Usuń
-          </button>
+          <>
+            <button
+              type="button"
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 cursor-pointer"
+              onClick={() => handleDelete()}
+            >
+              Usuń
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
+              onClick={() => onAddTest && group && onAddTest(group)}
+            >
+              Dodaj nowy test
+            </button>
+          </>
         )}
       </div>
 
@@ -212,7 +206,7 @@ export default function GroupEditForm({
           <button
             type="button"
             onClick={() => setShowAddForm((prev) => !prev)}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
+            className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 cursor-pointer"
           >
             {showAddForm ? "Anuluj dodawanie podgrupy" : "Dodaj podgrupę"}
           </button>
@@ -220,26 +214,19 @@ export default function GroupEditForm({
           {showAddForm && (
             <div className="mt-4 bg-gray-50 p-3 rounded border">
               <h3 className="font-semibold mb-2">Nowa podgrupa</h3>
-
               <input
                 className="w-full border p-2 mb-2 rounded"
                 placeholder="Nazwa podgrupy"
                 value={newSubgroupName}
                 onChange={(e) => setNewSubgroupName(e.target.value)}
               />
-
               <textarea
                 className="w-full border p-2 mb-2 rounded"
                 placeholder="Opis podgrupy"
                 value={newSubgroupDesc}
                 onChange={(e) => setNewSubgroupDesc(e.target.value)}
               />
-
-              <button
-                type="button"
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                onClick={handleAddSubgroup}
-              >
+              <button type="button" className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600" onClick={handleAddSubgroup}>
                 Dodaj podgrupę
               </button>
             </div>

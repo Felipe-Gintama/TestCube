@@ -8,14 +8,14 @@ export async function getTestCasesByUser(userId: number) {
   return result.rows;
 }
 
-export async function addTestCase(title: string, description: string, expected_result: string, project_id: number, userId: number) {
-  console.log("addTestCase():", { title, description, expected_result, project_id });
+export async function addTestCase(title: string, description: string, expected_result: string, project_id: number, group_id:number, userId: number) {
+  console.log("addTestCase():", { title, description, expected_result, project_id, group_id });
 
   const result = await pool.query(
-    `INSERT INTO test_cases (title, description, expected_result, project_id, created_by, status)
-    VALUES ($1, $2, $3, $4, $5, 'draft')
+    `INSERT INTO test_cases (title, description, expected_result, project_id, group_id, created_by, status)
+    VALUES ($1, $2, $3, $4, $5, $6, 'draft')
     RETURNING *`,
-    [title, description, expected_result, project_id, userId]
+    [title, description, expected_result, project_id, group_id, userId]
   );
 
   return result.rows[0];

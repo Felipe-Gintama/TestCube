@@ -1,7 +1,7 @@
 export interface TestCaseItem {
   id: number;
   title: string;
-  status: string;
+  status?: string;
 }
 
 export interface TestGroupNode {
