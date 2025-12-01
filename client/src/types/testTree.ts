@@ -2,6 +2,7 @@ export interface TestCaseItem {
   id: number;
   title: string;
   status?: string;
+  group_id?: number;
 }
 
 export interface TestGroupNode {

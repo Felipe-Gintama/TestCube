@@ -3,6 +3,17 @@ import type { TestGroupNode } from "../types/testTree";
 
 type Mode = "edit" | "add-root" | "add-subgroup";
 
+interface Props {
+  group?: TestGroupNode;
+  mode?: Mode;
+  parentId?: number;
+  onSave?: (updatedGroup: TestGroupNode) => void;
+  onDelete?: (groupId: number) => void;
+  onAddSubgroup?: (parentGroupId: number, newGroup: TestGroupNode) => void;
+  onAddRootGroup?: (newGroup: TestGroupNode) => void;
+  onAddTest?: (group: TestGroupNode) => void;
+}
+
 export default function GroupEditForm({
   group,
   mode = "edit",
@@ -12,43 +23,31 @@ export default function GroupEditForm({
   onAddSubgroup,
   onAddRootGroup,
   onAddTest,
-}: {
-  group?: TestGroupNode;
-  mode?: Mode;
-  parentId?: number;
-  onSave?: (updatedGroup: TestGroupNode) => void;
-  onDelete?: (groupId: number) => void;
-  onAddSubgroup?: (parentGroupId: number, newGroup: TestGroupNode) => void;
-  onAddRootGroup?: (newGroup: TestGroupNode) => void;
-  onAddTest?: (group: TestGroupNode) => void;
-}) {
-
-  if (mode === "edit" && !group) return <div className="text-gray-600">Brak wybranej grupy</div>;
+}: Props) {
+  const isEdit = mode === "edit";
+  const isAddRoot = mode === "add-root";
+  const isAddSub = mode === "add-subgroup";
 
   const [name, setName] = useState(group?.name ?? "");
   const [description, setDescription] = useState(group?.description ?? "");
   const [message, setMessage] = useState("");
 
-  const [newSubgroupName, setNewSubgroupName] = useState("");
-  const [newSubgroupDesc, setNewSubgroupDesc] = useState("");
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showSubForm, setShowSubForm] = useState(false);
+  const [subName, setSubName] = useState("");
+  const [subDesc, setSubDesc] = useState("");
 
-  const isEdit = mode === "edit";
-  const isAddRoot = mode === "add-root";
-  const isAddSub = mode === "add-subgroup";
-
-  async function handleSubmit(e: React.FormEvent) {
+  // ----------------------------
+  // Save group handler
+  // ----------------------------
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
     if (!token) return;
 
     const trimmedName = name.trim();
-    const trimmedDesc = description.trim() || null;
+    if (!trimmedName) return alert("Podaj nazwę grupy");
 
-    if (!trimmedName) {
-      alert("Podaj nazwę grupy");
-      return;
-    }
+    const trimmedDesc = description.trim() || null;
 
     try {
       let res: Response;
@@ -56,32 +55,19 @@ export default function GroupEditForm({
       if (isAddRoot) {
         res = await fetch("http://localhost:4000/api/groups/projects/1/groups", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ name: trimmedName, description: trimmedDesc, parent_id: null }),
         });
-      }
-
-      else if (isAddSub && parentId) {
+      } else if (isAddSub && parentId) {
         res = await fetch(`http://localhost:4000/api/groups/${parentId}/subgroup`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ name: trimmedName, description: trimmedDesc }),
         });
-      }
-
-      else if (isEdit && group) {
+      } else if (isEdit && group) {
         res = await fetch(`http://localhost:4000/api/groups/${group.id}`, {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ name: trimmedName, description: trimmedDesc }),
         });
       } else {
@@ -91,10 +77,10 @@ export default function GroupEditForm({
       if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
 
+      // Call callbacks
       if (isAddRoot && onAddRootGroup) onAddRootGroup(data);
       if (isAddSub && onAddSubgroup && parentId) onAddSubgroup(parentId, data);
-      if (isEdit && onSave && group)
-        onSave({ ...group, name: trimmedName, description: trimmedDesc ?? "" });
+      if (isEdit && onSave && group) onSave({ ...group, name: trimmedName, description: trimmedDesc ?? "" });
 
       setMessage("Zapisano pomyślnie!");
       if (isAddRoot || isAddSub) {
@@ -105,9 +91,12 @@ export default function GroupEditForm({
       console.error(err);
       setMessage("Nie udało się zapisać grupy");
     }
-  }
+  };
 
-  async function handleDelete() {
+  // ----------------------------
+  // Delete group
+  // ----------------------------
+  const handleDelete = async () => {
     const token = localStorage.getItem("token");
     if (!token || !group) return;
 
@@ -117,49 +106,47 @@ export default function GroupEditForm({
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Delete failed");
-
       setMessage("Grupa została usunięta");
-      if (onDelete) onDelete(group.id);
+      onDelete?.(group.id);
     } catch (err) {
       console.error(err);
       alert("Nie udało się usunąć grupy");
     }
-  }
+  };
 
-  async function handleAddSubgroup(e: React.FormEvent) {
-    e.preventDefault();
+  // ----------------------------
+  // Add sub-group
+  // ----------------------------
+  const handleAddSubgroup = async () => {
     const token = localStorage.getItem("token");
     if (!token || !group) return;
-    if (!newSubgroupName.trim()) return alert("Podaj nazwę podgrupy");
+    if (!subName.trim()) return alert("Podaj nazwę podgrupy");
 
     try {
       const res = await fetch(`http://localhost:4000/api/groups/${group.id}/subgroup`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: newSubgroupName.trim(),
-          description: newSubgroupDesc.trim() || null,
-        }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: subName.trim(), description: subDesc.trim() || null }),
       });
       if (!res.ok) throw new Error("Add subgroup failed");
-      const newGroup = await res.json();
 
-      if (onAddSubgroup) onAddSubgroup(group.id, newGroup);
-      setNewSubgroupName("");
-      setNewSubgroupDesc("");
-      setShowAddForm(false);
+      const newGroup = await res.json();
+      onAddSubgroup?.(group.id, newGroup);
+      setSubName("");
+      setSubDesc("");
+      setShowSubForm(false);
       setMessage(`Dodano nową podgrupę: ${newGroup.name}`);
     } catch (err) {
       console.error(err);
       alert("Nie udało się dodać podgrupy");
     }
-  }
+  };
 
+  // ----------------------------
+  // Render
+  // ----------------------------
   return (
-    <form onSubmit={handleSubmit} className="p-4 bg-white rounded shadow-md w-full">
+    <form onSubmit={handleSave} className="p-4 bg-white rounded shadow-md w-full">
       <h2 className="text-xl font-bold mb-4">
         {isEdit && `Edytuj grupę: ${group?.name}`}
         {isAddRoot && "Dodaj nową grupę główną"}
@@ -177,24 +164,16 @@ export default function GroupEditForm({
       </label>
 
       <div className="flex gap-2 mt-3">
-        <button type="submit" className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 cursor-pointer">
+        <button type="submit" className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
           {isEdit ? "Zapisz zmiany" : "Dodaj grupę"}
         </button>
 
         {isEdit && (
           <>
-            <button
-              type="button"
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 cursor-pointer"
-              onClick={() => handleDelete()}
-            >
+            <button type="button" className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600" onClick={handleDelete}>
               Usuń
             </button>
-            <button
-              type="button"
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
-              onClick={() => onAddTest && group && onAddTest(group)}
-            >
+            <button type="button" className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onClick={() => onAddTest && group && onAddTest(group)}>
               Dodaj nowy test
             </button>
           </>
@@ -203,29 +182,15 @@ export default function GroupEditForm({
 
       {isEdit && (
         <div className="mt-6 border-t pt-4">
-          <button
-            type="button"
-            onClick={() => setShowAddForm((prev) => !prev)}
-            className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 cursor-pointer"
-          >
-            {showAddForm ? "Anuluj dodawanie podgrupy" : "Dodaj podgrupę"}
+          <button type="button" className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600" onClick={() => setShowSubForm((prev) => !prev)}>
+            {showSubForm ? "Anuluj dodawanie podgrupy" : "Dodaj podgrupę"}
           </button>
 
-          {showAddForm && (
+          {showSubForm && (
             <div className="mt-4 bg-gray-50 p-3 rounded border">
               <h3 className="font-semibold mb-2">Nowa podgrupa</h3>
-              <input
-                className="w-full border p-2 mb-2 rounded"
-                placeholder="Nazwa podgrupy"
-                value={newSubgroupName}
-                onChange={(e) => setNewSubgroupName(e.target.value)}
-              />
-              <textarea
-                className="w-full border p-2 mb-2 rounded"
-                placeholder="Opis podgrupy"
-                value={newSubgroupDesc}
-                onChange={(e) => setNewSubgroupDesc(e.target.value)}
-              />
+              <input className="w-full border p-2 mb-2 rounded" placeholder="Nazwa podgrupy" value={subName} onChange={(e) => setSubName(e.target.value)} />
+              <textarea className="w-full border p-2 mb-2 rounded" placeholder="Opis podgrupy" value={subDesc} onChange={(e) => setSubDesc(e.target.value)} />
               <button type="button" className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600" onClick={handleAddSubgroup}>
                 Dodaj podgrupę
               </button>

@@ -32,6 +32,9 @@ export default function DashboardPage() {
                 <NavLink to="/testCasesManagement" className={({ isActive }) =>`p-2 rounded-md hover:bg-gray-200 transition ${isActive ? "bg-gray-800 font-semibold" : ""}`}>
                     Add/Delete test cases
                 </NavLink>
+                <NavLink to="/testPlans" className={({ isActive }) =>`p-2 rounded-md hover:bg-gray-200 transition ${isActive ? "bg-gray-800 font-semibold" : ""}`}>
+                    Test plan manager
+                </NavLink>
                 </nav>
             </aside>
             <main>

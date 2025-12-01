@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { getAllTestCases, addTestCase, editTestCase, getTestCasesByUser, getTestCase } from './test_cases.service'
+import { getAllTestCases, addTestCase, editTestCase, getTestCasesByUser, getTestCase, deleteTestCase } from './test_cases.service'
 import { AuthRequest } from '../../middlewares/authMiddleware'
 
 export async function getTestCases(_req: Request, res: Response) {
@@ -80,4 +80,16 @@ export async function getTestCaseById(req: AuthRequest, res: Response) {
     console.error("Error getTestCaseById:", error.message, error.stack);
     res.status(500).json({ error: "Internal server error" });
   }
+}
+
+export async function DeleteTestCaseController(req: Request, res: Response) {
+    try {
+        const id = Number(req.params.id);
+        const result = await deleteTestCase(id);
+        res.status(204).json(result);
+    }   
+    catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Błąd usuwania test cases' })
+    }
 }
