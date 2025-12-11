@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { getAllTestCases, addTestCase, editTestCase, getTestCasesByUser, getTestCase, deleteTestCase } from './test_cases.service'
+import { GetAllTestCasesFromProject, getAllTestCases, addTestCase, editTestCase, getTestCasesByUser, getTestCase, deleteTestCase } from './test_cases.service'
 import { AuthRequest } from '../../middlewares/authMiddleware'
 
 export async function getTestCases(_req: Request, res: Response) {
@@ -87,6 +87,18 @@ export async function DeleteTestCaseController(req: Request, res: Response) {
         const id = Number(req.params.id);
         const result = await deleteTestCase(id);
         res.status(204).json(result);
+    }   
+    catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Błąd usuwania test cases' })
+    }
+}
+
+export async function GetAllTestCasesFromProjectController(req: Request, res: Response) {
+    try {
+        const id = Number(req.params.id);
+        const result = await GetAllTestCasesFromProject(id);
+        res.status(200).json(result);
     }   
     catch (error) {
         console.error(error)

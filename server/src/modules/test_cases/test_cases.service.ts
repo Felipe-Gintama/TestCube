@@ -69,3 +69,11 @@ export async function deleteTestCase(id: number) {
   );
   return result.rows[0];
 }
+
+export async function GetAllTestCasesFromProject(project_id: number) {
+  const result = await pool.query(
+    `SELECT * FROM test_cases WHERE project_id = $1`,
+    [project_id]
+  );
+  return result.rows;
+}
