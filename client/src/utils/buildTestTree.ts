@@ -2,14 +2,14 @@ export function buildTestTree(rows: any[]) {
   const groups: any = {};
   const tree: any[] = [];
 
-  rows.forEach(row => {
+  rows.forEach((row) => {
     if (!groups[row.group_id]) {
       groups[row.group_id] = {
         id: row.group_id,
         name: row.group_name,
         parent_id: row.parent_group_id,
         cases: [],
-        children: []
+        children: [],
       };
     }
 
@@ -17,7 +17,9 @@ export function buildTestTree(rows: any[]) {
       groups[row.group_id].cases.push({
         id: row.case_id,
         title: row.case_title,
-        status: row.status
+        status: row.case_status,
+        assigned_to: row.assigned_to,
+        assigned_to_name: row.assigned_to_name,
       });
     }
   });

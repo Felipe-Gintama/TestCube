@@ -20,7 +20,12 @@ interface TreeNodeProps {
 // =====================
 // Kontener drzewa
 // =====================
-export function TestTree({ nodes, forceOpen, onSelectGroup, onSelectTestCase }: TestTreeProps) {
+export function TestTree({
+  nodes,
+  forceOpen,
+  onSelectGroup,
+  onSelectTestCase,
+}: TestTreeProps) {
   if (!nodes || nodes.length === 0) return <div>Brak grup testowych</div>;
 
   return (
@@ -41,7 +46,12 @@ export function TestTree({ nodes, forceOpen, onSelectGroup, onSelectTestCase }: 
 // =====================
 // Pojedynczy węzeł (rekurencyjny)
 // =====================
-function TreeNode({ node, forceOpen, onSelectGroup, onSelectTestCase }: TreeNodeProps) {
+function TreeNode({
+  node,
+  forceOpen,
+  onSelectGroup,
+  onSelectTestCase,
+}: TreeNodeProps) {
   const [localOpen, setLocalOpen] = useState<boolean | null>(null);
 
   const isOpen = localOpen !== null ? localOpen : forceOpen;

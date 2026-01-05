@@ -1,26 +1,35 @@
-import { Request, Response } from 'express'
-import { AuthRequest } from '../../middlewares/authMiddleware'
-import { createTestPlan, getReleaseById, GetTestPlans, cloneTestPlan, GetTestPlansByProject, deleteTestPlan } from './test_plans.service'
+import { Request, Response } from "express";
+import { AuthRequest } from "../../middlewares/authMiddleware";
+import {
+  createTestPlan,
+  getReleaseById,
+  GetTestPlans,
+  cloneTestPlan,
+  GetTestPlansByProject,
+  deleteTestPlan,
+  renameTestPlanService,
+} from "./test_plans.service";
 
 export async function GetTestPlansController(req: AuthRequest, res: Response) {
+  try {
+    const releasetId = req.params.releaseId;
 
-    try {
-        const releasetId  = req.params.releaseId;
-
-        if (!releasetId) {
-            return res.status(400).json({ error: "release id is required" });
-        }
-
-        const result = await GetTestPlans(Number(releasetId));
-        res.status(200).json(result);
+    if (!releasetId) {
+      return res.status(400).json({ error: "release id is required" });
     }
-    catch (error) {
-        console.error(error)
-        res.status(500).json({ error: 'internal server error' });
-    }
+
+    const result = await GetTestPlans(Number(releasetId));
+    res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "internal server error" });
+  }
 }
 
-export async function CreateTestPlanController(req: AuthRequest, res: Response) {
+export async function CreateTestPlanController(
+  req: AuthRequest,
+  res: Response
+) {
   try {
     const { releaseId } = req.params;
     const { name, description } = req.body;
@@ -36,7 +45,7 @@ export async function CreateTestPlanController(req: AuthRequest, res: Response) 
 
     const projectId = release.project_id;
 
-    const userId = req.user?.userId || null;;
+    const userId = req.user?.userId || null;
 
     const created = await createTestPlan(
       Number(releaseId),
@@ -59,7 +68,9 @@ export async function cloneTestPlanController(req: Request, res: Response) {
     const { releaseId } = req.body;
 
     if (!planId || !releaseId) {
-      return res.status(400).json({ error: "planId and releaseId are required" });
+      return res
+        .status(400)
+        .json({ error: "planId and releaseId are required" });
     }
 
     const cloned = await cloneTestPlan(planId, releaseId);
@@ -67,14 +78,20 @@ export async function cloneTestPlanController(req: Request, res: Response) {
     return res.status(201).json(cloned);
   } catch (err) {
     console.error("Clone plan error:", err);
-    return res.status(500).json({ error: "Server error while cloning test plan" });
+    return res
+      .status(500)
+      .json({ error: "Server error while cloning test plan" });
   }
 }
 
-export async function GetTestPlansByProjectController(req: Request, res: Response) {
+export async function GetTestPlansByProjectController(
+  req: Request,
+  res: Response
+) {
   try {
     const projectId = Number(req.params.projectId);
-    if (!projectId) return res.status(400).json({ error: "projectId is required" });
+    if (!projectId)
+      return res.status(400).json({ error: "projectId is required" });
 
     const plans = await GetTestPlansByProject(projectId);
 
@@ -85,7 +102,7 @@ export async function GetTestPlansByProjectController(req: Request, res: Respons
         acc[releaseId] = {
           releaseId,
           releaseVersion: plan.release_version,
-          plans: []
+          plans: [],
         };
       }
       acc[releaseId].plans.push({
@@ -93,7 +110,7 @@ export async function GetTestPlansByProjectController(req: Request, res: Respons
         name: plan.name,
         description: plan.description,
         created_by: plan.created_by,
-        created_at: plan.created_at
+        created_at: plan.created_at,
       });
       return acc;
     }, {});
@@ -105,7 +122,10 @@ export async function GetTestPlansByProjectController(req: Request, res: Respons
   }
 }
 
-export async function deleteTestPlanController(req: AuthRequest, res: Response) {
+export async function deleteTestPlanController(
+  req: AuthRequest,
+  res: Response
+) {
   try {
     const planId = Number(req.params.planId);
 
@@ -122,6 +142,33 @@ export async function deleteTestPlanController(req: AuthRequest, res: Response) 
     return res.status(200).json({ message: "Plan deleted" });
   } catch (err) {
     console.error("Delete plan error:", err);
-    return res.status(500).json({ error: "Server error while deleting test plan" });
+    return res
+      .status(500)
+      .json({ error: "Server error while deleting test plan" });
+  }
+}
+
+export async function renameTestPlanController(
+  req: AuthRequest,
+  res: Response
+) {
+  const planId = Number(req.params.planId);
+  const { name } = req.body;
+
+  if (!name || typeof name !== "string") {
+    return res.status(400).json({ message: "New plan name is required" });
+  }
+
+  try {
+    const result = await renameTestPlanService(planId, name);
+
+    if (!result.rowCount || result.rowCount === 0) {
+      return res.status(404).json({ message: "Test plan not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("renameTestPlan error:", err);
+    res.status(500).json({ message: "Failed to rename test plan" });
   }
 }

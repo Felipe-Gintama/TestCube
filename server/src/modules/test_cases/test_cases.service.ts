@@ -72,7 +72,15 @@ export async function deleteTestCase(id: number) {
 
 export async function GetAllTestCasesFromProject(project_id: number) {
   const result = await pool.query(
-    `SELECT * FROM test_cases WHERE project_id = $1`,
+    `SELECT 
+      tc.*,
+      g.name AS group_name
+    FROM test_cases tc
+    LEFT JOIN test_case_groups g ON tc.group_id = g.id
+    WHERE tc.project_id = $1
+    ORDER BY tc.id;
+`,
+    //`SELECT * FROM test_cases WHERE project_id = $1`,
     [project_id]
   );
   return result.rows;

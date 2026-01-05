@@ -5,14 +5,18 @@ export interface AuthRequest extends Request {
   user?: { userId: number; role: string };
 }
 
-export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+export function authMiddleware(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
   const authHeader = req.headers["authorization"];
   console.log(authHeader);
-  
+
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ error: "No token provided" });
   }
-  
+
   const token = authHeader.split(" ")[1];
   if (!token) {
     return res.status(401).json({ error: "Token missing" });
@@ -24,12 +28,13 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   }
 
   try {
-    const decoded = jwt.verify(token, secret) as unknown as { userId: number; role: string };
+    const decoded = jwt.verify(token, secret) as unknown as {
+      userId: number;
+      role: string;
+    };
     req.user = decoded;
     next();
   } catch (err) {
     return res.status(403).json({ error: "Invalid token" });
   }
 }
-
-

@@ -2,6 +2,18 @@ import { pool } from '../../config/db'
 
 export async function GetAllTestCasesFromPlan(planId: number) {
   const result = await pool.query(
+    // `SELECT 
+    //   tpc.id AS plan_case_id,
+    //   tc.id AS test_case_id,
+    //   tc.title,
+    //   tc.description,
+    //   tc.expected_result,
+    //   tc.group_id,
+    //   tpc.position
+    // FROM test_plan_cases tpc
+    // JOIN test_cases tc ON tpc.test_case_id = tc.id
+    // WHERE tpc.test_plan_id = $1
+    // ORDER BY tpc.position ASC`,
     `SELECT 
       tpc.id AS plan_case_id,
       tc.id AS test_case_id,
@@ -9,9 +21,11 @@ export async function GetAllTestCasesFromPlan(planId: number) {
       tc.description,
       tc.expected_result,
       tc.group_id,
+      g.name AS group_name,
       tpc.position
     FROM test_plan_cases tpc
     JOIN test_cases tc ON tpc.test_case_id = tc.id
+    LEFT JOIN test_case_groups g ON g.id = tc.group_id
     WHERE tpc.test_plan_id = $1
     ORDER BY tpc.position ASC`,
     [planId]

@@ -1,20 +1,24 @@
-import { pool } from '../../config/db'
+import { pool } from "../../config/db";
 
 export async function GetAllReleasesFromProject(projectId: number) {
-
-    const result = await pool.query(
-        `SELECT *
+  const result = await pool.query(
+    `SELECT *
         FROM releases 
         WHERE project_id = $1
         ORDER BY created_at DESC`,
-        [projectId]
-    );
+    [projectId]
+  );
 
-    return result.rows;
+  return result.rows;
 }
 
-export async function createRelease(projectId: number, version: string, description?: string | null, released_at?: string | null) {
-    const result = await pool.query(
+export async function createRelease(
+  projectId: number,
+  version: string,
+  description?: string | null,
+  released_at?: string | null
+) {
+  const result = await pool.query(
     `INSERT INTO releases (project_id, version, description, released_at)
     VALUES ($1, $2, $3, $4)
     RETURNING *`,
@@ -25,11 +29,24 @@ export async function createRelease(projectId: number, version: string, descript
 }
 
 export async function deleteReleaseById(releaseId: number) {
-    const result = await pool.query(
+  const result = await pool.query(
     `DELETE FROM releases
     WHERE id = $1
     RETURNING *
-    `, [releaseId]
+    `,
+    [releaseId]
+  );
+
+  return result.rows[0];
+}
+
+export async function renameRelease(releaseId: number, version: string) {
+  const result = await pool.query(
+    `UPDATE releases
+    SET version = $1
+    WHERE id = $2
+    RETURNING id, version`,
+    [version, releaseId]
   );
 
   return result.rows[0];

@@ -9,9 +9,14 @@ import EditTestCaseForm from "../components/TestCaseForm";
 export default function TestCasesPage() {
   const [tree, setTree] = useState<TestGroupNode[]>([]);
   const [allOpen, setAllOpen] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<TestGroupNode | null>(null);
-  const [selectedTestCase, setSelectedTestCase] = useState<TestCaseItem | null>(null);
-  const [addingTestToGroup, setAddingTestToGroup] = useState<TestGroupNode | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<TestGroupNode | null>(
+    null
+  );
+  const [selectedTestCase, setSelectedTestCase] = useState<TestCaseItem | null>(
+    null
+  );
+  const [addingTestToGroup, setAddingTestToGroup] =
+    useState<TestGroupNode | null>(null);
   const [showAddRootForm, setShowAddRootForm] = useState(false);
 
   const token = localStorage.getItem("token");
@@ -38,25 +43,41 @@ export default function TestCasesPage() {
   const handleSaveGroup = (updatedGroup: TestGroupNode) => {
     const updateNode = (node: TestGroupNode): TestGroupNode => {
       if (node.id === updatedGroup.id)
-        return { ...node, name: updatedGroup.name, description: updatedGroup.description };
+        return {
+          ...node,
+          name: updatedGroup.name,
+          description: updatedGroup.description,
+        };
       return { ...node, children: node.children.map(updateNode) };
     };
     setTree((prev) => prev.map(updateNode));
     setSelectedGroup(updatedGroup);
   };
 
-  const addSubgroupToTree = (parentId: number, newGroup: TestGroupNode, nodes: TestGroupNode[]): TestGroupNode[] => {
+  const addSubgroupToTree = (
+    parentId: number,
+    newGroup: TestGroupNode,
+    nodes: TestGroupNode[]
+  ): TestGroupNode[] => {
     return nodes.map((node) =>
       node.id === parentId
         ? { ...node, children: [...node.children, newGroup] }
-        : { ...node, children: addSubgroupToTree(parentId, newGroup, node.children) }
+        : {
+            ...node,
+            children: addSubgroupToTree(parentId, newGroup, node.children),
+          }
     );
   };
 
   const handleDeleteGroup = (groupId: number) => {
     const removeNode = (node: TestGroupNode): TestGroupNode | null => {
       if (node.id === groupId) return null;
-      return { ...node, children: node.children.map(removeNode).filter(Boolean) as TestGroupNode[] };
+      return {
+        ...node,
+        children: node.children
+          .map(removeNode)
+          .filter(Boolean) as TestGroupNode[],
+      };
     };
     setTree((prev) => prev.map(removeNode).filter(Boolean) as TestGroupNode[]);
     setSelectedGroup(null);
@@ -67,20 +88,23 @@ export default function TestCasesPage() {
   // ----------------------------
   const handleAddTestToTree = (groupId: number, newTest: TestCaseItem) => {
     const addTestNode = (node: TestGroupNode): TestGroupNode => {
-      if (node.id === groupId) return { ...node, cases: [...node.cases, newTest] };
+      if (node.id === groupId)
+        return { ...node, cases: [...node.cases, newTest] };
       return { ...node, children: node.children.map(addTestNode) };
     };
     setTree((prev) => prev.map(addTestNode));
   };
 
-  const removeTestFromTree = (nodes: TestGroupNode[], testId: number): TestGroupNode[] => {
-  return nodes.map((node) => ({
-    ...node,
-    cases: node.cases.filter(c => c.id !== testId),
-    children: removeTestFromTree(node.children, testId)
-  }));
-};
-
+  const removeTestFromTree = (
+    nodes: TestGroupNode[],
+    testId: number
+  ): TestGroupNode[] => {
+    return nodes.map((node) => ({
+      ...node,
+      cases: node.cases.filter((c) => c.id !== testId),
+      children: removeTestFromTree(node.children, testId),
+    }));
+  };
 
   // ----------------------------
   // Render
@@ -118,7 +142,10 @@ export default function TestCasesPage() {
             key="add-root-form"
             mode="add-root"
             onAddRootGroup={(newGroup) => {
-              setTree((prev) => [...prev, { ...newGroup, children: [], cases: [] }]);
+              setTree((prev) => [
+                ...prev,
+                { ...newGroup, children: [], cases: [] },
+              ]);
               setSelectedGroup({ ...newGroup, children: [], cases: [] });
               setShowAddRootForm(false);
             }}
@@ -135,7 +162,13 @@ export default function TestCasesPage() {
                 onSave={handleSaveGroup}
                 onDelete={handleDeleteGroup}
                 onAddSubgroup={(parentId, newGroup) =>
-                  setTree(addSubgroupToTree(parentId, { ...newGroup, children: [], cases: [] }, tree))
+                  setTree(
+                    addSubgroupToTree(
+                      parentId,
+                      { ...newGroup, children: [], cases: [] },
+                      tree
+                    )
+                  )
                 }
                 onAddTest={(group) => setAddingTestToGroup(group)}
               />
@@ -161,14 +194,18 @@ export default function TestCasesPage() {
                 groupId={selectedTestCase.id}
                 onSaved={() => alert("Zapisano!")}
                 onDeleted={() => {
-                  setTree(prev => removeTestFromTree(prev, selectedTestCase.id));
+                  setTree((prev) =>
+                    removeTestFromTree(prev, selectedTestCase.id)
+                  );
                   setSelectedTestCase(null);
                 }}
               />
             )}
 
             {!selectedGroup && !selectedTestCase && !addingTestToGroup && (
-              <div className="text-gray-600">Wybierz grupę lub przypadek testowy, aby edytować</div>
+              <div className="text-gray-600">
+                Wybierz grupę lub przypadek testowy, aby edytować
+              </div>
             )}
           </>
         )}
