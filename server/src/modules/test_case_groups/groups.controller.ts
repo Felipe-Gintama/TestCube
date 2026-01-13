@@ -189,21 +189,65 @@ export async function FullTreeWithGropusAndTestCasesController(
   }
 }
 //RUN TREE
+// export async function FullTreeWithGropusAndTestCasesForRunController(
+//   req: AuthRequest,
+//   res: Response
+// ) {
+//   try {
+//     //const projectId = Number(req.params.projectId);
+//     const runId = Number(req.params.runId);
+
+//     if (!runId) {
+//       return res.status(400).json({ error: "Project and run ID is required" });
+//     }
+
+//     const result = await FullTreeWithGropusAndTestCasesForRun(runId);
+//     res.status(200).json(result);
+//     console.log(result);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "internal server error" });
+//   }
+// }
 export async function FullTreeWithGropusAndTestCasesForRunController(
   req: AuthRequest,
   res: Response
 ) {
   try {
-    //const projectId = Number(req.params.projectId);
     const runId = Number(req.params.runId);
+    if (!runId) return res.status(400).json({ error: "Run ID is required" });
 
-    if (!runId) {
-      return res.status(400).json({ error: "Project and run ID is required" });
+    // Parse query params
+    let assignedTo: number | null = null;
+    if (req.query.assigned_to !== undefined) {
+      const val = Number(req.query.assigned_to);
+      assignedTo = isNaN(val) ? null : val;
     }
 
-    const result = await FullTreeWithGropusAndTestCasesForRun(runId);
+    let statuses: string[] | null = null;
+    if (req.query.statuses) {
+      if (typeof req.query.statuses === "string") {
+        statuses = req.query.statuses.split(",");
+      } else if (Array.isArray(req.query.statuses)) {
+        statuses = req.query.statuses as string[];
+      }
+    }
+    console.log(
+      "runId:",
+      runId,
+      "assignedTo:",
+      assignedTo,
+      "statuses:",
+      statuses
+    );
+
+    const result = await FullTreeWithGropusAndTestCasesForRun(
+      runId,
+      assignedTo,
+      statuses
+    );
+
     res.status(200).json(result);
-    console.log(result);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "internal server error" });

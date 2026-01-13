@@ -143,87 +143,87 @@ export async function FullTreeWithGropusAndTestCases(projectId: number) {
 
 //RUN TREE
 export async function FullTreeWithGropusAndTestCasesForRun(
-  //projectId: number,
-  runId: number
+  runId: number,
+  assignedTo: number | null = null,
+  statuses: string[] | null = null
 ) {
+  // Przygotowanie parametrów do zapytania
+  const assignedToParam = assignedTo; // może być null
+  const statusesParam = statuses && statuses.length > 0 ? statuses : null;
+
   const result = await pool.query(
-    //     `WITH RECURSIVE relevant_groups AS (
-    //     SELECT DISTINCT tcg.id, tcg.name, tcg.parent_group_id
-    //     FROM test_case_groups tcg
-    //     JOIN test_cases tc ON tc.group_id = tcg.id
-    //     JOIN test_run_cases trc ON trc.test_case_id = tc.id
-    //     WHERE trc.run_id = $1
+    `
+    WITH RECURSIVE relevant_groups AS (
+        SELECT DISTINCT
+            tcg.id,
+            tcg.name,
+            tcg.parent_group_id
+        FROM test_case_groups tcg
+        JOIN test_cases tc
+            ON tc.group_id = tcg.id
+        JOIN test_run_cases trc
+            ON trc.test_case_id = tc.id
+        WHERE trc.run_id = $1
 
-    //     UNION ALL
+        UNION ALL
 
-    //     SELECT parent.id, parent.name, parent.parent_group_id
-    //     FROM test_case_groups parent
-    //     JOIN relevant_groups child
-    //       ON parent.id = child.parent_group_id
-    // )
-    // SELECT DISTINCT
-    //     rg.id AS group_id,
-    //     rg.name AS group_name,
-    //     rg.parent_group_id,
-    //     tc.id AS case_id,
-    //     tc.title AS case_title,
-    //     tc.status AS case_status,
-    //     tc.assigned_to
-    // FROM relevant_groups rg
-    // LEFT JOIN (
-    //     SELECT tc.id, tc.title, trc.status, trc.assigned_to, tc.group_id
-    //     FROM test_cases tc
-    //     JOIN test_run_cases trc
-    //       ON trc.test_case_id = tc.id
-    //      AND trc.run_id = $1
-    // ) tc
-    //   ON tc.group_id = rg.id
-    // ORDER BY rg.parent_group_id, rg.id, tc.id;
+        SELECT
+            parent.id,
+            parent.name,
+            parent.parent_group_id
+        FROM test_case_groups parent
+        JOIN relevant_groups child
+            ON parent.id = child.parent_group_id
+    )
 
-    // `,
-    `WITH RECURSIVE relevant_groups AS (
-      SELECT DISTINCT tcg.id, tcg.name, tcg.parent_group_id
-      FROM test_case_groups tcg
-      JOIN test_cases tc ON tc.group_id = tcg.id
-      JOIN test_run_cases trc ON trc.test_case_id = tc.id
-      WHERE trc.run_id = $1
+    SELECT DISTINCT
+        rg.id AS group_id,
+        rg.name AS group_name,
+        rg.parent_group_id,
 
-      UNION ALL
+        tc.id AS case_id,
+        tc.title AS case_title,
+        tc.status AS case_status,
+        tc.assigned_to,
+        tc.assigned_to_name
 
-      SELECT parent.id, parent.name, parent.parent_group_id
-      FROM test_case_groups parent
-      JOIN relevant_groups child
-        ON parent.id = child.parent_group_id
-  )
-  SELECT DISTINCT
-      rg.id AS group_id,
-      rg.name AS group_name,
-      rg.parent_group_id,
-      tc.id AS case_id,
-      tc.title AS case_title,
-      tc.status AS case_status,
-      tc.assigned_to,
-    tc.assigned_to_name
-  FROM relevant_groups rg
-  LEFT JOIN (
-      SELECT
-          tc.id,
-          tc.title,
-          trc.status,
-          trc.assigned_to,
-          u.name AS assigned_to_name,
-          tc.group_id
-      FROM test_cases tc
-      JOIN test_run_cases trc 
-        ON trc.test_case_id = tc.id
-      AND trc.run_id = $1
-      LEFT JOIN users u
-        ON u.id = trc.assigned_to
-  ) tc
-  ON tc.group_id = rg.id
-  ORDER BY rg.parent_group_id, rg.id, tc.id`,
-    [runId]
+    FROM relevant_groups rg
+
+    LEFT JOIN (
+        SELECT
+            tc.id,
+            tc.title,
+            trc.status,
+            trc.assigned_to,
+            u.name AS assigned_to_name,
+            tc.group_id
+        FROM test_cases tc
+        JOIN test_run_cases trc
+            ON trc.test_case_id = tc.id
+            AND trc.run_id = $1
+        LEFT JOIN users u
+            ON u.id = trc.assigned_to
+        WHERE
+            (
+                $2::integer IS NULL       
+                OR ($2::integer = -1 AND trc.assigned_to IS NULL) 
+                OR trc.assigned_to = $2::integer
+            )
+        AND
+            (
+                $3::text[] IS NULL        
+                OR trc.status = ANY($3::text[])
+            )
+    ) tc
+        ON tc.group_id = rg.id
+
+    ORDER BY
+        rg.parent_group_id,
+        rg.id,
+        tc.id;
+    `,
+    [runId, assignedToParam, statusesParam]
   );
-
+  console.log("udało sie");
   return result.rows;
 }

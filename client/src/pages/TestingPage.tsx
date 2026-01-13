@@ -27,6 +27,13 @@ import type { TestGroupNode, TestCaseItem } from "../types/testTree";
 import { fetchFullTree, fetchFullTreeForRun } from "../api/testCases";
 import { buildTestTree } from "../utils/buildTestTree";
 
+const statusBgMap: Record<string, string> = {
+  BLOCKED: "bg-blue-200",
+  OK: "bg-green-200",
+  NOK: "bg-red-200",
+  untested: "bg-gray-100",
+};
+
 type TestRun = {
   test_run_id: number;
   version: string;
@@ -74,13 +81,24 @@ export default function TestingPage() {
   const [availableRunsForUser, setAvailableRunsForUser] = useState<TestRun[]>(
     []
   );
+  type TestStatus = "untested" | "OK" | "NOK" | "BLOCKED" | "any";
+  const allStatuses: TestStatus[] = ["untested", "OK", "NOK", "BLOCKED"];
+  //FILTERS
   const [activeRunId, setActiveRunId] = useState<number | null>(null);
+  const [activeUser, setActiveUser] = useState<number | null>(null);
+  const [activeState, setActiveState] = useState<TestStatus[]>([
+    ...allStatuses,
+  ]);
+
   const [selectedRun, setSelectedRun] = useState<number | null>(null);
 
   //const [users, setUsers] = useState<{ id: number; name: string }[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<number | "">("");
+  const [selectedUserToAssignTests, setSelectedUserToAssignTests] = useState<
+    number | ""
+  >("");
 
   const [userRuns, setUserRuns] = useState<
     {
@@ -92,6 +110,7 @@ export default function TestingPage() {
   >([]);
 
   const [selectedTest, setSelectedTest] = useState<TestCaseItem | null>(null);
+  const [selectedTestIds, setSelectedTestIds] = useState<number[]>([]);
 
   const [tree, setTree] = useState<TestGroupNode[]>([]);
   const [assignedTests, setAssignedTests] = useState<TestCaseItem[]>([]);
@@ -117,8 +136,16 @@ export default function TestingPage() {
     tests: Record<number, boolean>;
   }
 
+  const statusBgMap: { [key: string]: string } = {
+    OK: "bg-green-200",
+    NOK: "bg-red-200",
+    BLOCKED: "bg-blue-200",
+    untested: "bg-gray-200",
+  };
+
   /*MOJE FUNKCJE*/
   //---------------------------------------------------------------------------------------------------------------------
+
   useEffect(() => {
     async function loadRuns() {
       try {
@@ -209,6 +236,38 @@ export default function TestingPage() {
     } catch (err: any) {
       console.error(err);
       setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+  async function StopRun() {
+    if (!activeRunId) return;
+
+    const confirmed = window.confirm(
+      "Are you sure to finish test run?\nYou are not to able continue this run."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+
+      await apiFetch(
+        `http://localhost:4000/api/test_runs/${activeRunId}/finish`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      alert("Test run has been finished!");
+
+      //await FetchTreeForRun();
+      //setSelectedNode(null);
+      //setSelectedTestIds([]);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message ?? "Błąd podczas kończenia biegu");
     } finally {
       setLoading(false);
     }
@@ -332,7 +391,6 @@ export default function TestingPage() {
   }
 
   const token = localStorage.getItem("token");
-  const projectId = 1;
 
   // if (activeRunId !== null){
 
@@ -346,14 +404,44 @@ export default function TestingPage() {
   //       .catch(console.error);
   //   }, [token]);
   // }
+  const countStatuses = (nodes: TestGroupNode[]) => {
+    const counts: Record<string, number> = {
+      OK: 0,
+      NOK: 0,
+      BLOCKED: 0,
+      untested: 0,
+    };
+
+    const walk = (groups: TestGroupNode[]) => {
+      for (const g of groups) {
+        for (const c of g.cases ?? []) {
+          const status = c.status ?? "untested";
+          if (counts[status] !== undefined) {
+            counts[status]++;
+          }
+        }
+        if (g.children?.length) {
+          walk(g.children);
+        }
+      }
+    };
+
+    walk(nodes);
+    return counts;
+  };
 
   const FetchTreeForRun = async () => {
     if (!token) return;
     if (activeRunId === null) return;
-
+    console.log("active user: ", activeUser);
     try {
       setLoading(true);
-      const rows = await fetchFullTreeForRun(activeRunId, token);
+      const rows = await fetchFullTreeForRun(
+        activeRunId,
+        token,
+        activeUser,
+        activeState
+      );
       setTree(buildTestTree(rows));
     } catch (err) {
       console.error(err);
@@ -361,6 +449,8 @@ export default function TestingPage() {
       setLoading(false);
     }
   };
+
+  const statusCounts = countStatuses(tree);
   type TestItemProps = {
     test: TestCaseItem;
     checked: boolean;
@@ -368,8 +458,34 @@ export default function TestingPage() {
   };
 
   function TestItem({ test, checked, onToggle }: TestItemProps) {
+    const onTestWindowClosed = async () => {
+      await FetchTreeForRun();
+    };
+    const openTestWindow = () => {
+      const width = 900;
+      const height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+
+      const win = window.open(
+        `/execute-test/${test.id}/${activeRunId}`,
+        `test-${test.id}`,
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+
+      const interval = setInterval(() => {
+        if (!win || win.closed) {
+          clearInterval(interval);
+          onTestWindowClosed();
+        }
+      }, 500);
+    };
+    const bgClass = statusBgMap[test.status ?? ""] ?? "bg-white";
+
     return (
-      <div className="flex items-center gap-2 mb-1 border p-1 rounded bg-white">
+      <div
+        className={`flex items-center gap-2 mb-1 border p-1 rounded ${bgClass}`}
+      >
         <input
           type="checkbox"
           checked={checked}
@@ -378,50 +494,55 @@ export default function TestingPage() {
         <span>{test.title}</span>
         <span>{test.status}</span>
         <span>{test.assigned_to_name ?? "unassigned"}</span>
+
+        <button
+          onClick={openTestWindow}
+          className="ml-auto px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Do test
+        </button>
       </div>
     );
   }
 
   function SelectedNodeViewer({
     selectedNode,
+    selectedTestIds,
+    setSelectedTestIds,
   }: {
     selectedNode: SelectedNode | null;
+    selectedTestIds: number[];
+    setSelectedTestIds: React.Dispatch<React.SetStateAction<number[]>>;
   }) {
-    const [checkedGroups, setCheckedGroups] = useState<Record<number, boolean>>(
-      {}
-    );
-    const [checkedTests, setCheckedTests] = useState<Record<number, boolean>>(
-      {}
-    );
+    //const [selectedTestIds, setSelectedTestIds] = useState<number[]>([]);
     const [openGroups, setOpenGroups] = useState<Record<number, boolean>>({});
 
     const toggleGroupOpen = (id: number) => {
       setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
     };
 
-    // Funkcja do zaznaczenia wszystkich testów danej grupy
-    const toggleCheckGroup = (group: TestGroupNode) => {
-      const groupChecked = !(checkedGroups[group.id] ?? false);
-
-      setCheckedGroups((prev) => ({ ...prev, [group.id]: groupChecked }));
-
-      const newTests = { ...checkedTests };
-      group.cases?.forEach((c) => {
-        newTests[c.id] = groupChecked;
-      });
-
-      setCheckedTests(newTests);
+    const toggleCheckTest = (id: number) => {
+      setSelectedTestIds((prev) =>
+        prev.includes(id) ? prev.filter((tid) => tid !== id) : [...prev, id]
+      );
     };
 
-    const toggleCheckTest = (id: number) => {
-      setCheckedTests((prev) => ({ ...prev, [id]: !prev[id] }));
+    const toggleCheckGroup = (group: TestGroupNode) => {
+      const ids = group.cases?.map((c) => c.id) ?? [];
+
+      setSelectedTestIds((prev) => {
+        const allSelected = ids.every((id) => prev.includes(id));
+        return allSelected
+          ? prev.filter((id) => !ids.includes(id))
+          : [...new Set([...prev, ...ids])];
+      });
     };
 
     const flattenGroups = (groups: TestGroupNode[]): TestGroupNode[] => {
       let result: TestGroupNode[] = [];
       groups.forEach((g) => {
         result.push(g);
-        if (g.children && g.children.length > 0) {
+        if (g.children?.length) {
           result = result.concat(flattenGroups(g.children));
         }
       });
@@ -430,18 +551,16 @@ export default function TestingPage() {
 
     if (!selectedNode) return <p>No node selected</p>;
 
-    // Pojedynczy test
     if (selectedNode.type === "test" && selectedNode.node) {
       return (
         <TestItem
           test={selectedNode.node}
-          checked={checkedTests[selectedNode.node.id] ?? false}
+          checked={selectedTestIds.includes(selectedNode.node.id)}
           onToggle={toggleCheckTest}
         />
       );
     }
 
-    // Grupa i jej testy
     if (selectedNode.type === "group" && selectedNode.node) {
       const groupsToRender = flattenGroups([selectedNode.node]);
 
@@ -449,33 +568,36 @@ export default function TestingPage() {
         <>
           {groupsToRender.map((group) => {
             const isOpen = openGroups[group.id] ?? true;
+            const groupChecked =
+              group.cases?.length &&
+              group.cases.every((c) => selectedTestIds.includes(c.id));
+
             return (
               <div
                 key={group.id}
                 className="border p-2 rounded mb-2 bg-gray-100"
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <button
-                    className="font-bold"
-                    onClick={() => toggleGroupOpen(group.id)}
-                  >
+                  <button onClick={() => toggleGroupOpen(group.id)}>
                     {isOpen ? "▼" : "▶"}
                   </button>
+
                   <input
                     type="checkbox"
-                    checked={checkedGroups[group.id] ?? false}
+                    checked={!!groupChecked}
                     onChange={() => toggleCheckGroup(group)}
                   />
+
                   <span className="font-bold">{group.name}</span>
                 </div>
 
-                {isOpen && group.cases && group.cases.length > 0 && (
+                {isOpen && group.cases?.length > 0 && (
                   <div className="ml-6">
                     {group.cases.map((c) => (
                       <TestItem
                         key={c.id}
                         test={c}
-                        checked={checkedTests[c.id] ?? false}
+                        checked={selectedTestIds.includes(c.id)}
                         onToggle={toggleCheckTest}
                       />
                     ))}
@@ -490,6 +612,70 @@ export default function TestingPage() {
 
     return null;
   }
+
+  const assignTestsToUser = async () => {
+    if (!activeRunId) {
+      alert("Select test run");
+      return;
+    }
+
+    if (!selectedUserToAssignTests) {
+      alert("Select user");
+      return;
+    }
+
+    if (selectedTestIds.length === 0) {
+      alert("No tests selected");
+      return;
+    }
+
+    try {
+      await apiFetch("http://localhost:4000/api/test_runs/assignUserToTests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          runId: activeRunId,
+          userId: selectedUserToAssignTests,
+          testIds: selectedTestIds,
+        }),
+      });
+
+      alert("Tests assigned successfully");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to assign tests");
+    }
+  };
+
+  const removeAssignments = async () => {
+    if (!activeRunId) {
+      alert("Select test run");
+      return;
+    }
+
+    if (selectedTestIds.length === 0) {
+      alert("No tests selected");
+      return;
+    }
+
+    try {
+      await apiFetch("http://localhost:4000/api/test_runs/removeAssignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          runId: activeRunId,
+          testIds: selectedTestIds,
+        }),
+      });
+
+      alert("removed assignments");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to removed assignments tests");
+    }
+  };
+
+  const statuses: TestStatus[] = ["untested", "OK", "NOK", "BLOCKED"];
 
   // -----------------------------
   // Render
@@ -624,23 +810,90 @@ export default function TestingPage() {
           {/*--------------- test runs -------------------*/}
           <div className="bg-green-200 p-2 rounded mt-2">
             <h4 className="font-bold mb-1">Test runs</h4>
+            <div className="mt-2">
+              <select
+                value={activeRunId ?? ""}
+                onChange={(e) => setActiveRunId(Number(e.target.value))}
+              >
+                <option value="">Select Run</option>
+                {availableRunsForUser.map((rt) => (
+                  <option key={rt.test_run_id} value={rt.test_run_id}>
+                    {"ID: " + rt.test_run_id} {rt.plan_name}{" "}
+                    {rt.release_version}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* <div>
+              <select
+                value={activeUser === -1 ? "" : activeUser ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setActiveUser(val === "" ? -1 : Number(val));
+                }}
+              >
+                <option value="">Nikt</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </div> */}
             <select
-              value={activeRunId ?? ""}
-              onChange={(e) => setActiveRunId(Number(e.target.value))}
+              value={activeUser ?? ""} // null pokazuje pustą opcję dla dowolnego
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "") setActiveUser(null); // dowolny
+                else if (val === "-1") setActiveUser(-1); // nikt
+                else setActiveUser(Number(val)); // konkretny użytkownik
+              }}
             >
-              <option value="">Select Run</option>
-              {availableRunsForUser.map((rt) => (
-                <option key={rt.test_run_id} value={rt.test_run_id}>
-                  {"ID: " + rt.test_run_id} {rt.plan_name} {rt.release_version}
+              <option value="">Dowolny</option>
+              <option value="-1">Nikt</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
                 </option>
               ))}
             </select>
+            <div>
+              <select
+                value={
+                  activeState.length === allStatuses.length
+                    ? "any"
+                    : activeState[0]
+                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "any") {
+                    setActiveState([...allStatuses]);
+                  } else {
+                    setActiveState([value as TestStatus]);
+                  }
+                }}
+              >
+                <option value="any">All</option>
+                {allStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={() => FetchTreeForRun()}
               className="p-2 bg-green-500 text-white rounded hover:bg-green-600 ml-2"
             >
               Show tests
             </button>
+            <button
+              onClick={() => StopRun()}
+              className="p-2 bg-violet-500 text-white rounded hover:bg-violet-600 ml-2 "
+            >
+              Stop Run
+            </button>
+
             <div className="text-sm text-gray-600">
               Zalogowany jako: <b>{user?.email}</b> | <b>{user?.name}</b> |{" "}
               <b>ID: {user?.id}</b> | <b>{user?.role}</b>
@@ -648,23 +901,36 @@ export default function TestingPage() {
           </div>
 
           {/* TestTree - only render if run is selected */}
-          {activeRunId && (
-            <div className="bg-green-200 p-2 rounded flex-1 overflow-auto mt-2">
-              <h3 className="font-bold mb-1">Test Tree</h3>
-              <TestTree
-                nodes={tree}
-                forceOpen={false}
-                onSelectGroup={(node) => {
-                  console.log("Clicked group node:", node);
-                  if (node) setSelectedNode({ type: "group", node });
-                }}
-                onSelectTestCase={(node) => {
-                  console.log("Clicked test node:", node);
-                  if (node) setSelectedNode({ type: "test", node });
-                }}
-              />
+
+          <div className="bg-green-200 p-2 rounded flex-1 overflow-auto mt-2">
+            <div className="flex gap-3 mb-2">
+              <div className="px-2 py-1 rounded bg-green-500 text-white text-sm">
+                OK: {statusCounts.OK}
+              </div>
+              <div className="px-2 py-1 rounded bg-red-500 text-white text-sm">
+                NOK: {statusCounts.NOK}
+              </div>
+              <div className="px-2 py-1 rounded bg-blue-500 text-white text-sm">
+                BLOCKED: {statusCounts.BLOCKED}
+              </div>
+              <div className="px-2 py-1 rounded bg-gray-400 text-white text-sm">
+                untested: {statusCounts.untested}
+              </div>
             </div>
-          )}
+            <h3 className="font-bold mb-1">Test Tree</h3>
+            <TestTree
+              nodes={tree}
+              forceOpen={false}
+              onSelectGroup={(node) => {
+                console.log("Clicked group node:", node);
+                if (node) setSelectedNode({ type: "group", node });
+              }}
+              onSelectTestCase={(node) => {
+                console.log("Clicked test node:", node);
+                if (node) setSelectedNode({ type: "test", node });
+              }}
+            />
+          </div>
         </div>
 
         {/* RIGHT PANEL */}
@@ -672,8 +938,42 @@ export default function TestingPage() {
           <div className="bg-green-300 p-2 rounded flex-1 overflow-auto">
             <h3 className="font-bold mb-2">Assigned Tests & Execution</h3>
             <div className="bg-white p-2 rounded shadow mt-2">
-              <h4 className="font-bold mb-2">Selected Node</h4>
-              <SelectedNodeViewer selectedNode={selectedNode} />
+              Przypisz testy
+              <div className="bg-gray-300 rounded">
+                <select
+                  value={selectedUserToAssignTests ?? ""}
+                  onChange={(e) =>
+                    setSelectedUserToAssignTests(Number(e.target.value))
+                  }
+                >
+                  <option value="">Select User</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={assignTestsToUser}
+                  className="p-2 bg-green-500 text-white rounded hover:bg-green-600 ml-2"
+                >
+                  assign tests to user
+                </button>
+                <button
+                  onClick={removeAssignments}
+                  className="p-2 bg-red-500 text-white rounded hover:bg-red-600 ml-2"
+                >
+                  Remove Assignments
+                </button>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded shadow mt-2">
+              <h4 className="font-bold mb-2"></h4>
+              <SelectedNodeViewer
+                selectedNode={selectedNode}
+                selectedTestIds={selectedTestIds}
+                setSelectedTestIds={setSelectedTestIds}
+              />
             </div>
           </div>
         </div>

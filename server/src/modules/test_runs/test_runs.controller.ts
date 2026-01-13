@@ -2,8 +2,12 @@ import { Request, Response } from "express";
 import { AuthRequest } from "../../middlewares/authMiddleware";
 import {
   AddUserToRun,
+  AssignUserToTests,
+  FinishRun,
+  FinishTestCase,
   GetAllTestRuns,
   GetRunsAssignedToUser,
+  RemoveAssignment,
   StartTestRun,
 } from "./test_runs.service";
 
@@ -52,6 +56,64 @@ export async function AddUserToRunController(req: AuthRequest, res: Response) {
   try {
     const { userId, runId } = req.body;
     const result = await AddUserToRun(runId, userId);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "internal server error" });
+  }
+}
+
+export async function AssignUserToTestsController(
+  req: AuthRequest,
+  res: Response
+) {
+  try {
+    const { userId, runId, testIds } = req.body;
+    const result = await AssignUserToTests(userId, runId, testIds);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "internal server error" });
+  }
+}
+
+export async function RemoveAssignmentController(
+  req: AuthRequest,
+  res: Response
+) {
+  try {
+    const { runId, testIds } = req.body;
+    const result = await RemoveAssignment(runId, testIds);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "internal server error" });
+  }
+}
+
+export async function FinishTestRunController(req: AuthRequest, res: Response) {
+  try {
+    const runId = Number(req.params.runId);
+    console.log("run id ", runId);
+    if (!runId) {
+      return res.status(400).json({ error: "Run ID is required" });
+    }
+
+    const result = await FinishRun(runId);
+    res.status(200).json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function FinishTestCaseController(
+  req: AuthRequest,
+  res: Response
+) {
+  try {
+    const { status, comment, runId, testId } = req.body;
+    const result = await FinishTestCase(status, comment, runId, testId);
     res.status(200).json(result);
   } catch (error) {
     console.error(error);

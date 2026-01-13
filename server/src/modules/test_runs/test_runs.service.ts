@@ -41,6 +41,19 @@ export async function StartTestRun(
   }
 }
 
+export async function FinishRun(runId: number) {
+  const result = await pool.query(
+    `UPDATE test_runs
+    SET
+    status = 'FINISHED',
+    finished_at = NOW()
+    WHERE id = $1
+    RETURNING *`,
+    [runId]
+  );
+  return result.rows[0];
+}
+
 export async function AddUserToRun(runId: number, userId: number) {
   const result = await pool.query(
     `INSERT INTO test_run_users (test_run_id, user_id) VALUES ($1, $2) RETURNING *`,
@@ -63,6 +76,7 @@ export async function GetRunsAssignedToUser(userId: number) {
     JOIN releases r ON r.id = rtp.release_id
     JOIN test_run_users tru ON tru.test_run_id = tr.id
     WHERE tru.user_id = $1
+    AND tr.status = 'IN_PROGRESS'
     ORDER BY tr.id`,
     [userId]
   );
@@ -81,7 +95,56 @@ export async function GetAllTestRuns() {
     JOIN test_plans tp ON tp.id = tr.test_plan_id
     JOIN release_test_plans rtp ON rtp.plan_id = tp.id
     JOIN releases r ON r.id = rtp.release_id
-    ORDER BY tr.id`
+    WHERE tr.status = 'IN_PROGRESS'
+    ORDER BY tr.id
+    `
   );
   return result.rows;
+}
+
+export async function AssignUserToTests(
+  userId: number,
+  runId: number,
+  testIds: number[]
+) {
+  const result = await pool.query(
+    `UPDATE test_run_cases
+  SET assigned_to = $1
+  WHERE run_id = $2
+  AND test_case_id = ANY($3::int[]);  `,
+    [userId, runId, testIds]
+  );
+  return result.rows;
+}
+
+export async function RemoveAssignment(runId: number, testIds: number[]) {
+  const result = await pool.query(
+    `
+    UPDATE test_run_cases
+    SET assigned_to = null
+    WHERE run_id = $1
+    AND test_case_id = ANY($2::int[]);  
+    `,
+    [runId, testIds]
+  );
+  return result.rows;
+}
+
+export async function FinishTestCase(
+  status: string,
+  comment: string,
+  runId: number,
+  testId: number
+) {
+  const result = await pool.query(
+    `
+    UPDATE test_run_cases
+    SET status = $1, executed_at = now(), comment = $2
+    WHERE run_id = $3
+    AND test_case_id = $4
+    RETURNING *
+    `,
+    [status, comment, runId, testId]
+  );
+  return result.rows[0];
 }

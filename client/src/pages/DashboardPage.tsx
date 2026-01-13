@@ -26,7 +26,7 @@ export default function DashboardPage() {
             Projects
           </NavLink>
           <NavLink
-            to="/raports"
+            to="/reports"
             className={({ isActive }) =>
               `p-2 rounded-md hover:bg-gray-200 transition ${
                 isActive ? "bg-gray-800 font-semibold" : ""

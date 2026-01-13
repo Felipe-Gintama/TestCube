@@ -9,6 +9,8 @@ import AddMemberToProject from "./pages/AddMemberToProject";
 import TestCasesPage from "./pages/TestCasesManagemet";
 import TestPlanUIPrototype from "./pages/TestPlanManager";
 import TestingPage from "./pages/TestingPage";
+import ExecuteTestPage from "./pages/ExecuteTestPage";
+import ReportsPage from "./pages/ReportsPage";
 
 export default function App() {
   const token = localStorage.getItem("token");
@@ -37,6 +39,11 @@ export default function App() {
           <Route path="/testCasesManagement" element={<TestCasesPage />} />
           <Route path="/testPlans" element={<TestPlanUIPrototype />} />
           <Route path="/testing" element={<TestingPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route
+            path="/execute-test/:testId/:runId"
+            element={<ExecuteTestPage />}
+          />
         </Route>
 
         {/* redirect */}
