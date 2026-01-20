@@ -1,23 +1,55 @@
-export async function loginUser(email: string, password: string) {
-    const res = await fetch('http://localhost:4000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+import { useAuth } from "../auth/AuthContext";
+
+export function useApi() {
+  const { token, logout } = useAuth();
+
+  async function apiFetch(url: string, options: RequestInit = {}) {
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
     });
-    if (!res.ok)
-        throw new Error('Login failed');
+
+    if (res.status === 401) {
+      logout();
+      throw new Error("Unauthorized");
+    }
+
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
 
     return res.json();
+  }
+
+  return { apiFetch };
 }
 
-export async function registerUser(name: string, email: string, password: string) {
-    const res = await fetch('http://localhost:4000/api/users/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password })
-    });
-    if (!res.ok)
-        throw new Error('Registration failed');
+export async function loginUser(email: string, password: string) {
+  const res = await fetch("http://localhost:4000/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) throw new Error("Login failed");
 
-    return res.json();
+  return res.json();
+}
+
+export async function registerUser(
+  name: string,
+  email: string,
+  password: string,
+) {
+  const res = await fetch("http://localhost:4000/api/users/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, password }),
+  });
+  if (!res.ok) throw new Error("Registration failed");
+
+  return res.json();
 }

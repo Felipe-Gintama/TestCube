@@ -12,7 +12,7 @@ import {
 
 const router = Router();
 
-router.get("/", authMiddleware, getAllUserProjects);
+router.get("/", authMiddleware, authMiddleware, getAllUserProjects);
 router.get("/:id", authMiddleware, allMembersOfProject);
 router.post("/", authMiddleware, createNewProject);
 router.post("/:projectId/members/:userId", authMiddleware, addMemeberToProject);
@@ -21,7 +21,7 @@ router.delete("/:id", authMiddleware, deleteProject);
 router.delete(
   "/:projectId/members/:userId",
   authMiddleware,
-  deleteMemberFromProject
+  deleteMemberFromProject,
 );
 
 export default router;

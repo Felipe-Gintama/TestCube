@@ -9,6 +9,7 @@ import releasesRouter from "./modules/releases/releases.routes";
 import testPlansRouter from "./modules/test_plans/test_plans.routes";
 import testPlansCasesRouter from "././modules/test_plan_cases/test_plan_cases.routes";
 import testRunsCasesRouter from "././modules/test_runs/test_runs.routes";
+import reportsRouter from "././modules/reports/reports.routes";
 import cors from "cors";
 
 const app = express();
@@ -25,5 +26,6 @@ app.use("/api/releases", releasesRouter);
 app.use("/api/test_plans", testPlansRouter);
 app.use("/api/test_plan_cases", testPlansCasesRouter);
 app.use("/api/test_runs", testRunsCasesRouter);
+app.use("/api/reports", reportsRouter);
 
 app.listen(4000, () => console.log("Server running on http://localhost:4000"));

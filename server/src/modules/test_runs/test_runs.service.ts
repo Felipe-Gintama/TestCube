@@ -2,7 +2,7 @@ import { pool } from "../../config/db";
 
 export async function StartTestRun(
   releaseId: number,
-  planId: number
+  planId: number,
   //userId: number
 ) {
   const client = await pool.connect();
@@ -16,7 +16,7 @@ export async function StartTestRun(
       VALUES ($1, $2)
       RETURNING id
       `,
-      [planId, releaseId]
+      [planId, releaseId],
     );
 
     const runId = runRes.rows[0].id;
@@ -28,7 +28,7 @@ export async function StartTestRun(
       FROM test_plan_cases
       WHERE test_plan_id = $2
       `,
-      [runId, planId]
+      [runId, planId],
     );
 
     await client.query("COMMIT");
@@ -49,7 +49,7 @@ export async function FinishRun(runId: number) {
     finished_at = NOW()
     WHERE id = $1
     RETURNING *`,
-    [runId]
+    [runId],
   );
   return result.rows[0];
 }
@@ -57,7 +57,7 @@ export async function FinishRun(runId: number) {
 export async function AddUserToRun(runId: number, userId: number) {
   const result = await pool.query(
     `INSERT INTO test_run_users (test_run_id, user_id) VALUES ($1, $2) RETURNING *`,
-    [runId, userId]
+    [runId, userId],
   );
   return result.rows[0];
 }
@@ -78,7 +78,7 @@ export async function GetRunsAssignedToUser(userId: number) {
     WHERE tru.user_id = $1
     AND tr.status = 'IN_PROGRESS'
     ORDER BY tr.id`,
-    [userId]
+    [userId],
   );
   return result.rows;
 }
@@ -97,7 +97,16 @@ export async function GetAllTestRuns() {
     JOIN releases r ON r.id = rtp.release_id
     WHERE tr.status = 'IN_PROGRESS'
     ORDER BY tr.id
-    `
+    `,
+  );
+  return result.rows;
+}
+export async function GetTestRuns(runId: number) {
+  const result = await pool.query(
+    `SELECT *
+    FROM test_runs WHERE id = $1
+    `,
+    [runId],
   );
   return result.rows;
 }
@@ -105,14 +114,14 @@ export async function GetAllTestRuns() {
 export async function AssignUserToTests(
   userId: number,
   runId: number,
-  testIds: number[]
+  testIds: number[],
 ) {
   const result = await pool.query(
     `UPDATE test_run_cases
   SET assigned_to = $1
   WHERE run_id = $2
   AND test_case_id = ANY($3::int[]);  `,
-    [userId, runId, testIds]
+    [userId, runId, testIds],
   );
   return result.rows;
 }
@@ -125,7 +134,7 @@ export async function RemoveAssignment(runId: number, testIds: number[]) {
     WHERE run_id = $1
     AND test_case_id = ANY($2::int[]);  
     `,
-    [runId, testIds]
+    [runId, testIds],
   );
   return result.rows;
 }
@@ -134,7 +143,7 @@ export async function FinishTestCase(
   status: string,
   comment: string,
   runId: number,
-  testId: number
+  testId: number,
 ) {
   const result = await pool.query(
     `
@@ -144,7 +153,51 @@ export async function FinishTestCase(
     AND test_case_id = $4
     RETURNING *
     `,
-    [status, comment, runId, testId]
+    [status, comment, runId, testId],
   );
   return result.rows[0];
+}
+
+//------Dashboard page API
+export type DashboardRun = {
+  id: number;
+  ok: number;
+  nok: number;
+  blocked: number;
+  untested: number;
+  total: number;
+  progress: number;
+};
+
+export async function getActiveRunsDashboard(): Promise<DashboardRun[]> {
+  const { rows } = await pool.query(`
+    SELECT
+        tr.id,
+        COUNT(trc.id) AS total,
+        COUNT(*) FILTER (WHERE trc.status = 'OK') AS ok,
+        COUNT(*) FILTER (WHERE trc.status = 'NOK') AS nok,
+        COUNT(*) FILTER (WHERE trc.status = 'BLOCKED') AS blocked,
+        COUNT(*) FILTER (WHERE trc.status = 'untested') AS untested
+      FROM test_runs tr
+      LEFT JOIN test_run_cases trc ON trc.run_id = tr.id
+      WHERE tr.status = 'IN_PROGRESS'
+      GROUP BY tr.id
+  `);
+
+  return rows.map((r) => {
+    const finished = Number(r.ok) + Number(r.nok) + Number(r.blocked);
+
+    const total = Number(r.total);
+
+    return {
+      id: r.id,
+      name: r.name,
+      ok: Number(r.ok),
+      nok: Number(r.nok),
+      blocked: Number(r.blocked),
+      untested: Number(r.untested),
+      total,
+      progress: total === 0 ? 0 : Math.round((finished / total) * 100),
+    };
+  });
 }

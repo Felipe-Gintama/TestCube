@@ -26,6 +26,8 @@ import { TestTree } from "../components/TestTree/testTree"; // Twój komponent
 import type { TestGroupNode, TestCaseItem } from "../types/testTree";
 import { fetchFullTree, fetchFullTreeForRun } from "../api/testCases";
 import { buildTestTree } from "../utils/buildTestTree";
+import { useApi } from "../hooks/apiFetch";
+import { useAuth } from "../auth/AuthContext";
 
 const statusBgMap: Record<string, string> = {
   BLOCKED: "bg-blue-200",
@@ -69,7 +71,7 @@ export default function TestingPage() {
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
 
   const [releases, setReleases] = useState<{ id: number; version: string }[]>(
-    []
+    [],
   );
   const [activeReleaseId, setActiveReleaseId] = useState<number | null>(null);
 
@@ -79,7 +81,7 @@ export default function TestingPage() {
   const [runsForTree, setRunsForTree] = useState<TestRun[]>([]);
   const [availableRuns, setAvailableRuns] = useState<TestRun[]>([]);
   const [availableRunsForUser, setAvailableRunsForUser] = useState<TestRun[]>(
-    []
+    [],
   );
   type TestStatus = "untested" | "OK" | "NOK" | "BLOCKED" | "any";
   const allStatuses: TestStatus[] = ["untested", "OK", "NOK", "BLOCKED"];
@@ -93,7 +95,7 @@ export default function TestingPage() {
   const [selectedRun, setSelectedRun] = useState<number | null>(null);
 
   //const [users, setUsers] = useState<{ id: number; name: string }[]>([]);
-  const [user, setUser] = useState<User | null>(null);
+  //const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<number | "">("");
   const [selectedUserToAssignTests, setSelectedUserToAssignTests] = useState<
@@ -142,6 +144,26 @@ export default function TestingPage() {
     BLOCKED: "bg-blue-200",
     untested: "bg-gray-200",
   };
+  const { apiFetch } = useApi(); // albo tylko apiFetch jeśli user jest w useAuth
+  const { user, login, logout } = useAuth();
+
+  useEffect(() => {
+    async function loadMe() {
+      try {
+        const res = await apiFetch("http://localhost:4000/api/auth/me"); // apiFetch używa tokena z Context
+        // zaktualizuj user w Context, jeśli trzeba
+        login(localStorage.getItem("token")!, res.user);
+      } catch (err: any) {
+        console.error(err);
+        // jeśli 401, możesz wylogować użytkownika
+        logout();
+      }
+    }
+
+    if (!user) {
+      loadMe();
+    }
+  }, []);
 
   /*MOJE FUNKCJE*/
   //---------------------------------------------------------------------------------------------------------------------
@@ -150,7 +172,7 @@ export default function TestingPage() {
     async function loadRuns() {
       try {
         const res = await apiFetch(
-          "http://localhost:4000/api/test_runs/getAll"
+          "http://localhost:4000/api/test_runs/getAll",
         );
         console.log("runs: ", res);
         setAvailableRuns(res);
@@ -162,19 +184,6 @@ export default function TestingPage() {
       }
     }
     loadRuns();
-  }, []);
-
-  useEffect(() => {
-    async function loadMe() {
-      try {
-        const res = await apiFetch("http://localhost:4000/api/auth/me");
-        setUser(res.user);
-      } catch (e) {
-        console.error(e);
-        setUser(null);
-      }
-    }
-    loadMe();
   }, []);
 
   useEffect(() => {
@@ -205,7 +214,7 @@ export default function TestingPage() {
       if (!user?.id) return;
       try {
         const res = await apiFetch(
-          `http://localhost:4000/api/test_runs/getAll/${user?.id}`
+          `http://localhost:4000/api/test_runs/getAll/${user?.id}`,
         );
         setAvailableRunsForUser(res);
         //setRunsForTree(res);
@@ -231,7 +240,7 @@ export default function TestingPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
-        }
+        },
       );
     } catch (err: any) {
       console.error(err);
@@ -244,7 +253,7 @@ export default function TestingPage() {
     if (!activeRunId) return;
 
     const confirmed = window.confirm(
-      "Are you sure to finish test run?\nYou are not to able continue this run."
+      "Are you sure to finish test run?\nYou are not to able continue this run.",
     );
 
     if (!confirmed) return;
@@ -257,7 +266,7 @@ export default function TestingPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
 
       alert("Test run has been finished!");
@@ -273,40 +282,58 @@ export default function TestingPage() {
     }
   }
 
-  const apiFetch = async (url: string, opts: RequestInit = {}) => {
-    const token = localStorage.getItem("token");
-    const headers = opts.headers ? (opts.headers as any) : {};
-    const merged = {
-      ...opts,
-      headers: {
-        ...headers,
-        Authorization: token ? `Bearer ${token}` : undefined,
-      },
-    };
-    const res = await fetch(url, merged);
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`API error ${res.status}: ${text}`);
-    }
-    return res.json();
-  };
+  // const apiFetch = async (url: string, opts: RequestInit = {}) => {
+  //   const token = localStorage.getItem("token");
+  //   const headers = opts.headers ? (opts.headers as any) : {};
+  //   const merged = {
+  //     ...opts,
+  //     headers: {
+  //       ...headers,
+  //       Authorization: token ? `Bearer ${token}` : undefined,
+  //     },
+  //   };
+  //   const res = await fetch(url, merged);
+  //   if (!res.ok) {
+  //     const text = await res.text();
+  //     throw new Error(`API error ${res.status}: ${text}`);
+  //   }
+  //   return res.json();
+  // };
 
+  // async function loadProjects() {
+  //   try {
+  //     setLoading(true);
+  //     const data = await apiFetch("http://localhost:4000/api/projects");
+  //     setProjects(data);
+  //     // if (data.length > 0) {
+  //     //   setActiveProjectId((prev) => prev ?? data[0].id);
+  //     // }
+  //   } catch (err: any) {
+  //     console.error(err);
+  //     setError(err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }
+
+  // useEffect(() => {
+  //   loadProjects();
+  // }, []);
   async function loadProjects() {
     try {
       setLoading(true);
-      const data = await apiFetch("http://localhost:4000/api/projects");
-      setProjects(data);
-      // if (data.length > 0) {
-      //   setActiveProjectId((prev) => prev ?? data[0].id);
-      // }
+      const data = await apiFetch("http://localhost:4000/api/projects/");
+      console.log("projects api response:", data);
+
+      setProjects(Array.isArray(data) ? data : (data.projects ?? []));
     } catch (err: any) {
       console.error(err);
       setError(err.message);
+      setProjects([]); // fallback
     } finally {
       setLoading(false);
     }
   }
-
   useEffect(() => {
     loadProjects();
   }, []);
@@ -316,7 +343,7 @@ export default function TestingPage() {
       setLoading(true);
       console.log("project id => " + activeProjectId);
       const data = await apiFetch(
-        `http://localhost:4000/api/releases/${activeProjectId}`
+        `http://localhost:4000/api/releases/${activeProjectId}`,
       );
       console.log("data releases => " + data);
       setReleases(data);
@@ -347,7 +374,7 @@ export default function TestingPage() {
       console.log("plan id => " + activeProjectId);
       setLoading(true);
       const data = await apiFetch(
-        `http://localhost:4000/api/test_plans/${activeProjectId}`
+        `http://localhost:4000/api/test_plans/${activeProjectId}`,
       );
       setPlans(data);
     } catch (err: any) {
@@ -440,7 +467,7 @@ export default function TestingPage() {
         activeRunId,
         token,
         activeUser,
-        activeState
+        activeState,
       );
       setTree(buildTestTree(rows));
     } catch (err) {
@@ -470,7 +497,7 @@ export default function TestingPage() {
       const win = window.open(
         `/execute-test/${test.id}/${activeRunId}`,
         `test-${test.id}`,
-        `width=${width},height=${height},left=${left},top=${top}`
+        `width=${width},height=${height},left=${left},top=${top}`,
       );
 
       const interval = setInterval(() => {
@@ -523,7 +550,7 @@ export default function TestingPage() {
 
     const toggleCheckTest = (id: number) => {
       setSelectedTestIds((prev) =>
-        prev.includes(id) ? prev.filter((tid) => tid !== id) : [...prev, id]
+        prev.includes(id) ? prev.filter((tid) => tid !== id) : [...prev, id],
       );
     };
 
@@ -675,7 +702,7 @@ export default function TestingPage() {
     }
   };
 
-  const statuses: TestStatus[] = ["untested", "OK", "NOK", "BLOCKED"];
+  //const statuses: TestStatus[] = ["untested", "OK", "NOK", "BLOCKED"];
 
   // -----------------------------
   // Render
@@ -740,7 +767,7 @@ export default function TestingPage() {
                       <option key={p.id} value={p.id}>
                         {p.name}
                       </option>
-                    ))
+                    )),
                   )}
               </select>
             </div>
@@ -844,8 +871,10 @@ export default function TestingPage() {
               value={activeUser ?? ""} // null pokazuje pustą opcję dla dowolnego
               onChange={(e) => {
                 const val = e.target.value;
-                if (val === "") setActiveUser(null); // dowolny
-                else if (val === "-1") setActiveUser(-1); // nikt
+                if (val === "")
+                  setActiveUser(null); // dowolny
+                else if (val === "-1")
+                  setActiveUser(-1); // nikt
                 else setActiveUser(Number(val)); // konkretny użytkownik
               }}
             >

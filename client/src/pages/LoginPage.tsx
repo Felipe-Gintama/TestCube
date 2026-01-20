@@ -1,43 +1,95 @@
+// import { useState } from "react";
+// import { loginUser } from "../api/auth";
+// import { useNavigate } from "react-router-dom";
+// import { useAuth } from "../auth/AuthContext";
+
+// export default function LoginPage() {
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [message, setMessage] = useState("");
+//   const navigate = useNavigate();
+//   const { login } = useAuth();
+
+//   async function handleSubmit(e: React.FormEvent) {
+//     e.preventDefault();
+
+//     try {
+//       const data = await loginUser(email, password);
+//       //localStorage.setItem("token", data.token);
+//       login(data.token, data.user);
+
+//       setMessage(`Login successful: ${data.token}`);
+//       setEmail("");
+//       setPassword("");
+
+//       navigate("/dashboard");
+//     } catch (err) {
+//       setMessage(`Login failed`);
+
+//       setEmail("");
+//       setPassword("");
+//     }
+//   }
+
+//   return (
+//     <>
+//       <form onSubmit={handleSubmit}>
+//         <input
+//           placeholder="Email"
+//           value={email}
+//           onChange={(e) => setEmail(e.target.value)}
+//         />
+//         <input
+//           placeholder="Password"
+//           value={password}
+//           type="password"
+//           onChange={(e) => setPassword(e.target.value)}
+//         />
+//         <button type="submit">Login</button>
+//         <p>{message}</p>
+//       </form>
+//     </>
+//   );
+// }
+
 import { useState } from "react";
-import { loginUser } from "../api/auth";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import { loginUser } from "../api/auth";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [message, setMessage] = useState('');
-    const navigate = useNavigate();
-    
-    async function handleSubmit(e: React.FormEvent) {
-        e.preventDefault();
-
-        try {
-            const data = await loginUser(email, password);
-            localStorage.setItem("token", data.token);
-            
-            setMessage(`Login successful: ${data.token}`);
-            setEmail('');
-            setPassword('');
-            
-            navigate("/dashboard"); 
-        }
-        catch (err) {
-            setMessage(`Login failed`);
-
-            setEmail('');
-            setPassword('');
-        }
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      const data = await loginUser(email, password);
+      login(data.token, data.user); // <-- zapis globalny
+      navigate("/dashboard");
+    } catch (err) {
+      setMessage("Login failed");
     }
+  }
 
-    return (
-        <>
-            <form onSubmit={handleSubmit}>
-                <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}/>
-                <input placeholder="Password" value={password} type="password" onChange={e => setPassword(e.target.value)}/>
-                <button type="submit">Login</button>
-                <p>{message}</p>
-            </form>
-        </>
-    );
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <input
+        placeholder="Password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <button type="submit">Login</button>
+      <p>{message}</p>
+    </form>
+  );
 }
