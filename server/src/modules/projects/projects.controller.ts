@@ -8,6 +8,7 @@ import {
   GetMembersOfProject,
   AddMemeberToProject,
   DeleteMemberProject,
+  updateGithubRepo,
 } from "./projects.service";
 
 export async function getAllUserProjects(req: AuthRequest, res: Response) {
@@ -104,7 +105,7 @@ export async function addMemeberToProject(req: AuthRequest, res: Response) {
 
     const updateMembers = await AddMemeberToProject(
       parsedProjectId,
-      parsedUserId
+      parsedUserId,
     );
     res.status(200).json(updateMembers);
   } catch (error) {
@@ -126,11 +127,27 @@ export async function deleteMemberFromProject(req: AuthRequest, res: Response) {
 
     const updateMembers = await DeleteMemberProject(
       parsedProjectId,
-      parsedUserId
+      parsedUserId,
     );
     res.status(200).json(updateMembers);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "internal server error" });
   }
+}
+
+export async function setGithubRepo(req: AuthRequest, res: Response) {
+  const projectId = Number(req.params.id);
+  const { github_repo } = req.body;
+
+  if (!req.user || req.user.role !== "ADMIN") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  if (github_repo && !/^[^/]+\/[^/]+$/.test(github_repo)) {
+    return res.status(400).json({ error: "Invalid repo format" });
+  }
+
+  const project = await updateGithubRepo(projectId, github_repo);
+  res.json(project);
 }

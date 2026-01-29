@@ -11,52 +11,46 @@ import TestPlanUIPrototype from "./pages/TestPlanManager";
 import TestingPage from "./pages/TestingPage";
 import ExecuteTestPage from "./pages/ExecuteTestPage";
 import ReportsPage from "./pages/ReportsPage";
+import UserManagementPage from "./pages/UserManagementPage";
+import RequireAuth from "./auth/RequireAuth";
+import CreateGithubIssue from "./pages/GithubIssuePage";
+import GithubIssuePage from "./pages/GithubIssuePage";
 
 export default function App() {
-  const token = localStorage.getItem("token");
-
   return (
     <BrowserRouter>
       <Routes>
-        {/* default public routers */}
+        {/* PUBLIC */}
         <Route element={<MainLayout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
         </Route>
 
-        {/* securited */}
-        <Route
-          element={token ? <MainLayout /> : <Navigate to="/login" replace />}
-        >
-          <Route path="/dashboard" element={<DashboardPage />} />
+        {/* PRIVATE */}
+        <Route element={<RequireAuth />}>
+          <Route element={<MainLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
 
-          {/* project manage*/}
-          <Route path="/projects" element={<ProjectsPage />}>
-            <Route path="new" element={<NewProjectForm />} />
-            <Route path="members" element={<AddMemberToProject />} />
+            <Route path="/projects" element={<ProjectsPage />}>
+              <Route path="new" element={<NewProjectForm />} />
+              <Route path="members" element={<AddMemberToProject />} />
+            </Route>
+
+            <Route path="/testCasesManagement" element={<TestCasesPage />} />
+            <Route path="/testPlans" element={<TestPlanUIPrototype />} />
+            <Route path="/testing" element={<TestingPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/users" element={<UserManagementPage />} />
+            <Route path="/issues" element={<GithubIssuePage />} />
+            <Route
+              path="/execute-test/:testId/:runId"
+              element={<ExecuteTestPage />}
+            />
           </Route>
-
-          <Route path="/testCasesManagement" element={<TestCasesPage />} />
-          <Route path="/testPlans" element={<TestPlanUIPrototype />} />
-          <Route path="/testing" element={<TestingPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route
-            path="/execute-test/:testId/:runId"
-            element={<ExecuteTestPage />}
-          />
         </Route>
 
-        {/* redirect */}
-        <Route
-          path="/"
-          element={
-            token ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
+        {/* DEFAULT */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );

@@ -10,6 +10,7 @@ import testPlansRouter from "./modules/test_plans/test_plans.routes";
 import testPlansCasesRouter from "././modules/test_plan_cases/test_plan_cases.routes";
 import testRunsCasesRouter from "././modules/test_runs/test_runs.routes";
 import reportsRouter from "././modules/reports/reports.routes";
+import githubRouter from "././modules/github/github.routes";
 import cors from "cors";
 
 const app = express();
@@ -27,5 +28,6 @@ app.use("/api/test_plans", testPlansRouter);
 app.use("/api/test_plan_cases", testPlansCasesRouter);
 app.use("/api/test_runs", testRunsCasesRouter);
 app.use("/api/reports", reportsRouter);
+app.use("/api/github", githubRouter);
 
 app.listen(4000, () => console.log("Server running on http://localhost:4000"));

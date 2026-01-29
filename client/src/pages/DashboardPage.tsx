@@ -95,7 +95,7 @@ export default function DashboardPage() {
             Testing
           </NavLink>
           <NavLink
-            to="/roles"
+            to="/users"
             className={({ isActive }) =>
               `p-2 rounded-md hover:bg-gray-200 transition ${
                 isActive ? "bg-gray-800 font-semibold" : ""
@@ -123,6 +123,16 @@ export default function DashboardPage() {
             }
           >
             Test plan manager
+          </NavLink>
+          <NavLink
+            to="/issues"
+            className={({ isActive }) =>
+              `p-2 rounded-md hover:bg-gray-200 transition ${
+                isActive ? "bg-gray-800 font-semibold" : ""
+              }`
+            }
+          >
+            Github issues
           </NavLink>
         </nav>
       </aside>

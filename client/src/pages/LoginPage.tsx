@@ -68,7 +68,7 @@ export default function LoginPage() {
     e.preventDefault();
     try {
       const data = await loginUser(email, password);
-      login(data.token, data.user); // <-- zapis globalny
+      login(data.token, data.user);
       navigate("/dashboard");
     } catch (err) {
       setMessage("Login failed");

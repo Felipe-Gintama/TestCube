@@ -8,6 +8,7 @@ import {
   allMembersOfProject,
   addMemeberToProject,
   deleteMemberFromProject,
+  setGithubRepo,
 } from "./projects.controller";
 
 const router = Router();
@@ -23,5 +24,6 @@ router.delete(
   authMiddleware,
   deleteMemberFromProject,
 );
+router.put("/projects/:id/github-repo", authMiddleware, setGithubRepo);
 
 export default router;
