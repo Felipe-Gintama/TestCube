@@ -1,8 +1,10 @@
 export type Project = {
+  users: string[];
   id: number;
   name: string;
   description: string;
   created_by: number;
+  created_at: string;
   github_repo?: string;
 };
 

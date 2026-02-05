@@ -9,6 +9,7 @@ import {
   AddMemeberToProject,
   DeleteMemberProject,
   updateGithubRepo,
+  GetAllUsersFromProject,
 } from "./projects.service";
 
 export async function getAllUserProjects(req: AuthRequest, res: Response) {
@@ -27,11 +28,32 @@ export async function getAllUserProjects(req: AuthRequest, res: Response) {
   }
 }
 
+export async function GetAllUsersFromProjectController(
+  req: AuthRequest,
+  res: Response,
+) {
+  const projectId = Number(req.params.projectId);
+
+  if (isNaN(projectId)) {
+    return res.status(400).json({ error: "Invalid project ID" });
+  }
+
+  try {
+    const users = await GetAllUsersFromProject(projectId);
+    res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch project users" });
+  }
+}
+
 export async function createNewProject(req: AuthRequest, res: Response) {
   try {
     const userId = req.user!.userId;
-    const { name, desc } = req.body;
-    const newProject = await CreateNewProject(name, desc, userId);
+    const { name, desc, repo } = req.body;
+    const newProject = await CreateNewProject(name, desc, userId, repo);
+
+    console.log(newProject);
 
     res.status(201).json(newProject);
   } catch (error) {
@@ -59,19 +81,31 @@ export async function editProject(req: AuthRequest, res: Response) {
 }
 
 export async function deleteProject(req: AuthRequest, res: Response) {
+  // try {
+  //   const projectId = req.params.id;
+
+  //   if (!projectId) {
+  //     return res.status(400).json({ error: "ID is required" });
+  //   }
+  //   const id = parseInt(projectId, 10);
+
+  //   const deleteProject = await DeleteProject(id);
+  //   res.status(200).json(deleteProject);
+  // } catch (error) {
+  //   console.error(error);
+  //   res.status(500).json({ error: "internal server error" });
+  // }
+
+  const projectId = Number(req.params.id);
+
+  if (isNaN(projectId)) return res.status(400).json({ error: "Invalid ID" });
+
   try {
-    const projectId = req.params.id;
-
-    if (!projectId) {
-      return res.status(400).json({ error: "ID is required" });
-    }
-    const id = parseInt(projectId, 10);
-
-    const deleteProject = await DeleteProject(id);
-    res.status(200).json(deleteProject);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "internal server error" });
+    const deletedProject = await DeleteProject(projectId);
+    res.json(deletedProject);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete project" });
   }
 }
 
@@ -138,16 +172,16 @@ export async function deleteMemberFromProject(req: AuthRequest, res: Response) {
 
 export async function setGithubRepo(req: AuthRequest, res: Response) {
   const projectId = Number(req.params.id);
-  const { github_repo } = req.body;
+  const { repo } = req.body;
 
   if (!req.user || req.user.role !== "ADMIN") {
     return res.status(403).json({ error: "Forbidden" });
   }
 
-  if (github_repo && !/^[^/]+\/[^/]+$/.test(github_repo)) {
+  if (repo && !/^[^/]+\/[^/]+$/.test(repo)) {
     return res.status(400).json({ error: "Invalid repo format" });
   }
 
-  const project = await updateGithubRepo(projectId, github_repo);
+  const project = await updateGithubRepo(projectId, repo);
   res.json(project);
 }

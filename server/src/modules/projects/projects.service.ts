@@ -9,15 +9,29 @@ export async function GetAllUserProjects(userId: number) {
   return result.rows;
 }
 
+export async function GetAllUsersFromProject(projectId: number) {
+  const result = await pool.query(
+    `SELECT u.id, u.name
+      FROM users u
+      JOIN project_members pm ON pm.user_id = u.id
+      WHERE pm.project_id = $1
+      ORDER BY u.id`,
+    [projectId],
+  );
+
+  return result.rows;
+}
+
 export async function CreateNewProject(
   name: string,
   desc: string,
   userId: number,
+  repo?: string,
 ) {
   const result = await pool.query(
-    `INSERT INTO projects (name, description, created_by)
-        VALUES ($1, $2, $3) RETURNING *`,
-    [name, desc, userId],
+    `INSERT INTO projects (name, description, created_by, github_repo)
+        VALUES ($1, $2, $3, $4) RETURNING *`,
+    [name, desc, userId, repo ?? null],
   );
 
   return result.rows[0];
@@ -38,13 +52,39 @@ export async function EditProject(id: number, updates: any) {
   return result.rows[0];
 }
 
-export async function DeleteProject(project_id: number) {
-  const result = await pool.query(
-    `DELETE FROM projects WHERE id = $1 RETURNING *`,
-    [project_id],
-  );
+// export async function DeleteProject(project_id: number) {
+//   const result = await pool.query(
+//     `DELETE FROM projects WHERE id = $1 RETURNING *`,
+//     [project_id],
+//   );
 
-  return result.rows[0];
+//   return result.rows[0];
+// }
+
+export async function DeleteProject(projectId: number) {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    await client.query(`DELETE FROM project_members WHERE project_id = $1`, [
+      projectId,
+    ]);
+
+    const res = await client.query(
+      `DELETE FROM projects WHERE id = $1 RETURNING *`,
+      [projectId],
+    );
+
+    await client.query("COMMIT");
+
+    return res.rows[0];
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function GetMembersOfProject(projectId: number) {
@@ -76,16 +116,13 @@ export async function DeleteMemberProject(projectId: number, userId: number) {
   return result.rows[0];
 }
 
-export async function updateGithubRepo(
-  projectId: number,
-  githubRepo: string | null,
-) {
+export async function updateGithubRepo(projectId: number, repo: string | null) {
   const result = await pool.query(
     `UPDATE projects
-SET github_repo = $1
-WHERE id = $2
-RETURNING id, name, github_repo`,
-    [githubRepo, projectId],
+    SET github_repo = $1
+    WHERE id = $2
+    RETURNING id, name, github_repo`,
+    [repo, projectId],
   );
 
   return result.rows[0];

@@ -9,11 +9,17 @@ import {
   addMemeberToProject,
   deleteMemberFromProject,
   setGithubRepo,
+  GetAllUsersFromProjectController,
 } from "./projects.controller";
 
 const router = Router();
 
 router.get("/", authMiddleware, authMiddleware, getAllUserProjects);
+router.get(
+  "/:projectId/users",
+  authMiddleware,
+  GetAllUsersFromProjectController,
+);
 router.get("/:id", authMiddleware, allMembersOfProject);
 router.post("/", authMiddleware, createNewProject);
 router.post("/:projectId/members/:userId", authMiddleware, addMemeberToProject);
@@ -24,6 +30,6 @@ router.delete(
   authMiddleware,
   deleteMemberFromProject,
 );
-router.put("/projects/:id/github-repo", authMiddleware, setGithubRepo);
+router.put("/:id/github-repo", authMiddleware, setGithubRepo);
 
 export default router;
