@@ -15,13 +15,14 @@ import UserManagementPage from "./pages/UserManagementPage";
 import RequireAuth from "./auth/RequireAuth";
 import CreateGithubIssue from "./pages/GithubIssuePage";
 import GithubIssuePage from "./pages/GithubIssuePage";
+import WelcomeLayout from "./layouts/WelcomeLayout";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         {/* PUBLIC */}
-        <Route element={<MainLayout />}>
+        <Route element={<WelcomeLayout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
         </Route>

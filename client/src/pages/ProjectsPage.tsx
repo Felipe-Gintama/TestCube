@@ -2,6 +2,16 @@ import { useState, useEffect } from "react";
 import { useApi } from "../hooks/apiFetch";
 import type { Project } from "../api/projects";
 import { useGithubApi } from "../hooks/useGithubApi";
+import {
+  Home,
+  Settings,
+  User,
+  Edit,
+  Minus,
+  Plus,
+  UserMinus,
+  UserRoundMinus,
+} from "lucide-react";
 
 type User = { id: number; name: string };
 
@@ -1059,15 +1069,15 @@ export default function ProjectsPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Project Management</h1>
         <button
-          className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700"
+          className="cursor-pointer bg-teal-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-teal-700"
           onClick={() => setShowCreatePanel((prev) => !prev)}
         >
           <span className="text-lg font-bold">+</span> Add Project
         </button>
       </div>
 
-      {showCreatePanel && (
-        <div className="bg-white rounded shadow p-6 mb-6">
+      {/* {showCreatePanel && (
+        <div className="bg-white rounded shadow p-6 mb-6 w-1/4">
           <h2 className="text-xl font-semibold mb-4">Create New Project</h2>
 
           <div className="flex flex-col gap-3">
@@ -1079,12 +1089,11 @@ export default function ProjectsPage() {
               className="border rounded px-2 py-1 w-full"
             />
 
-            <input
-              type="text"
+            <textarea
               placeholder="Description"
               value={newProjectDesc}
               onChange={(e) => setNewProjectDesc(e.target.value)}
-              className="border rounded px-2 py-1 w-full"
+              className="border rounded px-2 py-2 w-full min-h-[80px]"
             />
 
             <input
@@ -1116,170 +1125,292 @@ export default function ProjectsPage() {
             )}
           </div>
         </div>
-      )}
+      )} */}
 
       {/* ================= PROJECTS TABLE ================= */}
-      <div className="bg-white rounded shadow overflow-hidden mb-6">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-200">
-            <tr>
-              <th className="p-2 text-left">Name</th>
-              <th className="p-2 text-left">Description</th>
-              <th className="p-2 text-left">GitHub Repo</th>
-              <th className="p-2 text-left">Created</th>
-              <th className="p-2 text-center">Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {projects.map((p) => (
-              <tr key={p.id} className="border-t hover:bg-gray-50">
-                <td className="p-2">{p.name}</td>
-                <td className="p-2">{p.description}</td>
-                <td className="p-2">{p.github_repo || "-"}</td>
-                <td className="p-2">{p.created_at}</td>
-                <td className="p-2 text-center">
-                  <button
-                    className="text-blue-600 hover:underline"
-                    onClick={() => setSelectedProjectId(p.id)}
-                  >
-                    Edit project
-                  </button>
-                </td>
+      <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
+        <div className="max-h-96 overflow-y-auto">
+          <table className="w-full text-sm border-collapse border border-gray-200">
+            <thead className="bg-gradient-to-t from-emerald-600 to-emerald-800 text-white sticky top-0">
+              <tr>
+                <th className="p-2 text-left first:rounded-tl-lg last:rounded-tr-lg">
+                  Name
+                </th>
+                <th className="p-2 text-left">Description</th>
+                <th className="p-2 text-left">GitHub Repo</th>
+                <th className="p-2 text-left">Created</th>
+                <th className="p-2 text-center">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {projects.map((p, i) => (
+                <tr
+                  key={p.id}
+                  className={`border-t border-gray-300 ${
+                    i % 2 === 0 ? "bg-gray-100" : "bg-gray-200"
+                  }`}
+                >
+                  <td className="p-2 text-left w-100">{p.name}</td>
+                  <td className="p-2 text-left w-120">{p.description}</td>
+                  <td className="p-2 text-left w-100">
+                    {p.github_repo || "-"}
+                  </td>
+                  <td className="p-2 text-left w-100">{p.created_at}</td>
+                  <td className="p-2 text-center">
+                    <button
+                      className="cursor-pointer text-teal-600 hover:underline"
+                      onClick={() => setSelectedProjectId(p.id)}
+                    >
+                      <Edit size={20} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* ================= EDIT PANEL ================= */}
-      <div className="bg-white rounded shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Edit Project</h2>
+      <div className="flex gap-6">
+        {/* ===== EDIT PANEL ===== */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 w-1/2 border border-gray-200">
+          <h2 className="w-1/2 text-2xl font-semibold mb-6 text-gray-800">
+            Edit Project
+          </h2>
 
-        {!selectedProject ? (
-          <p className="text-gray-500 italic">
-            Wybierz projekt z tabeli, aby rozpocząć edycję
-          </p>
-        ) : (
-          <div className="flex gap-6">
-            {/* ===== LEFT: PROJECT EDIT ===== */}
-            <div className="w-1/2">
-              <label className="block text-sm font-medium mb-1">
-                Description
-              </label>
-              <input
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                className="border rounded px-2 py-1 w-full mb-4"
-              />
+          {!selectedProject ? (
+            <p className="text-gray-500 italic">
+              Wybierz projekt z tabeli, aby rozpocząć edycję
+            </p>
+          ) : (
+            <div className="flex gap-8">
+              {/* ================= LEFT: PROJECT SETTINGS ================= */}
+              <div className="w-1/2 space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Name
+                  </label>
+                  <input
+                    value={editRepo}
+                    onChange={(e) => setEditRepo(e.target.value)}
+                    placeholder="Name"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 
+                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                       transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 min-h-[100px] 
+                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                       transition"
+                  />
+                </div>
 
-              <label className="block text-sm font-medium mb-1">
-                GitHub Repo
-              </label>
-              <input
-                value={editRepo}
-                onChange={(e) => setEditRepo(e.target.value)}
-                placeholder="owner/repo"
-                className="border rounded px-2 py-1 w-full mb-4"
-              />
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    GitHub Repo
+                  </label>
+                  <input
+                    value={editRepo}
+                    onChange={(e) => setEditRepo(e.target.value)}
+                    placeholder="owner/repo"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 
+                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                       transition"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    className="cursor-pointer bg-teal-600 hover:bg-teal-700 text-white mr-2 px-4 py-2 rounded-lg w-1/2 font-medium transition"
+                    onClick={async () => {
+                      const updated = await api.updateProject(
+                        selectedProject.id,
+                        editDescription,
+                        editRepo,
+                      );
 
-              <button
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded w-full"
-                onClick={async () => {
-                  const updated = await api.updateProject(
-                    selectedProject.id,
-                    editDescription,
-                    editRepo,
-                  );
+                      setProjects((prev) =>
+                        prev.map((p) => (p.id === updated.id ? updated : p)),
+                      );
+                    }}
+                  >
+                    Save Changes
+                  </button>
 
-                  setProjects((prev) =>
-                    prev.map((p) => (p.id === updated.id ? updated : p)),
-                  );
-                }}
-              >
-                Save changes
-              </button>
+                  <button
+                    className="cursor-pointer bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg w-1/2 font-medium transition"
+                    onClick={async () => {
+                      if (!confirm("Delete this project?")) return;
 
-              <div className="mt-6 border-t pt-4">
-                <button
-                  className="text-red-600 hover:underline"
-                  onClick={async () => {
-                    if (!confirm("Delete this project?")) return;
+                      await api.deleteProject(selectedProject.id);
+                      setProjects((prev) =>
+                        prev.filter((p) => p.id !== selectedProject.id),
+                      );
+                      setSelectedProjectId(null);
+                    }}
+                  >
+                    Delete Project
+                  </button>
+                </div>
+              </div>
 
-                    await api.deleteProject(selectedProject.id);
-                    setProjects((prev) =>
-                      prev.filter((p) => p.id !== selectedProject.id),
-                    );
-                    setSelectedProjectId(null);
+              {/* ================= RIGHT: USERS ================= */}
+              <div className="w-1/2 bg-gray-50 rounded-xl p-5 border border-gray-200">
+                <h3 className="text-lg font-semibold mb-4 text-gray-700">
+                  Project Members
+                </h3>
+
+                {projectUsers.length === 0 ? (
+                  <p className="text-sm text-gray-500 italic mb-4">
+                    Brak użytkowników w projekcie
+                  </p>
+                ) : (
+                  <div className="mb-4 border border-gray-200">
+                    <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+                      <thead className="bg-gray-100 text-gray-600">
+                        <tr>
+                          <th className="text-left px-4 py-2 font-medium">
+                            User
+                          </th>
+                          <th className="text-right px-4 py-2 font-medium">
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {projectUsers.map((u) => (
+                          <tr
+                            key={u.id}
+                            className="border-t hover:bg-gray-50 transition"
+                          >
+                            <td className="px-4 py-2">{u.name}</td>
+
+                            <td className="px-4 py-2 text-right">
+                              <button
+                                className="cursor-pointer text-red-600 hover:text-red-700 font-medium text-sm transition"
+                                onClick={async () => {
+                                  await api.removeMember(
+                                    selectedProject.id,
+                                    u.id,
+                                  );
+                                  setProjectUsers((prev) =>
+                                    prev.filter((x) => x.id !== u.id),
+                                  );
+                                }}
+                              >
+                                <UserRoundMinus size={20} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                <select
+                  className="w-full border border border-gray-300 rounded-lg px-3 py-2 
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 
+                     focus:border-blue-500 transition"
+                  onChange={async (e) => {
+                    const userId = Number(e.target.value);
+                    if (!userId) return;
+
+                    await api.addMember(selectedProject.id, userId);
+
+                    const user = users.find((u) => u.id === userId);
+                    if (user && !projectUsers.some((x) => x.id === user.id)) {
+                      setProjectUsers((prev) => [...prev, user]);
+                    }
                   }}
                 >
-                  Delete project
-                </button>
+                  <option value="">Add user</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
+          )}
+        </div>
 
-            {/* ===== RIGHT: PROJECT USERS ===== */}
-            <div className="w-1/2">
-              <h3 className="text-md font-semibold mb-3">
-                Users in this project
-              </h3>
+        {/* ===== CREATE PANEL ===== */}
+        {showCreatePanel && (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-1/2">
+            <h2 className="text-2xl font-semibold mb-6 text-gray-800">
+              Create New Project
+            </h2>
 
-              {projectUsers.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">
-                  Brak użytkowników w projekcie
-                </p>
-              ) : (
-                <table className="w-full text-sm border mb-3">
-                  <thead className="bg-gray-200">
-                    <tr>
-                      <th className="p-2 text-left">Name</th>
-                      <th className="p-2 text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {projectUsers.map((u) => (
-                      <tr key={u.id} className="border-t">
-                        <td className="p-2">{u.name}</td>
-                        <td className="p-2 text-center">
-                          <button
-                            className="text-red-600 hover:underline"
-                            onClick={async () => {
-                              await api.removeMember(selectedProject.id, u.id);
-                              setProjectUsers((prev) =>
-                                prev.filter((x) => x.id !== u.id),
-                              );
-                            }}
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">
+                  Project Name
+                </label>
+                <input
+                  type="text"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2
+                     focus:outline-none focus:ring-2 focus:ring-teal-600
+                     focus:border-blue-500 transition"
+                />
+              </div>
 
-              <select
-                className="border p-2 rounded w-full"
-                onChange={async (e) => {
-                  const userId = Number(e.target.value);
-                  if (!userId) return;
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={newProjectDesc}
+                  onChange={(e) => setNewProjectDesc(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2
+                     min-h-[120px]
+                     focus:outline-none focus:ring-2 focus:ring-teal-600
+                     focus:border-blue-500 transition"
+                />
+              </div>
 
-                  await api.addMember(selectedProject.id, userId);
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">
+                  GitHub Repository
+                </label>
+                <input
+                  type="text"
+                  value={newProjectRepo}
+                  onChange={(e) => setNewProjectRepo(e.target.value)}
+                  placeholder="owner/repo"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2
+                     focus:outline-none focus:ring-2 focus:ring-teal-600
+                     focus:border-blue-500 transition"
+                />
+              </div>
 
-                  const user = users.find((u) => u.id === userId);
-                  if (user && !projectUsers.some((x) => x.id === user.id)) {
-                    setProjectUsers((prev) => [...prev, user]);
-                  }
-                }}
-              >
-                <option value="">Add user</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex gap-3 pt-4">
+                <button
+                  className="cursor-pointer bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 rounded-lg font-medium transition"
+                  onClick={handleCreateProject}
+                >
+                  Create Project
+                </button>
+
+                <button
+                  className="bg-gray-500 px-5 py-2 rounded-lg border border-gray-500 text-white font-medium
+                     hover:bg-gray-400 transition cursor-pointer"
+                  onClick={() => setShowCreatePanel(false)}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         )}
