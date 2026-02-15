@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -6,7 +6,23 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 
+import {
+  Home,
+  Settings,
+  User,
+  Edit,
+  Minus,
+  Plus,
+  UserMinus,
+  UserRoundMinus,
+  BookCopy,
+  PenLine,
+  Delete,
+} from "lucide-react";
+
 import type { TestCaseItem, TestGroupNode } from "../types/testTree";
+import React from "react";
+import { ResizableAside } from "../styles/ResizeableAsideProps";
 
 /**
  * Test Plan Manager - wyczyszczona wersja
@@ -162,6 +178,9 @@ export default function TestPlanManager() {
   const [newName, setNewName] = useState<string>("");
   const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
   const [newPlanNameEdit, setNewPlanNameEdit] = useState("");
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    {},
+  );
 
   async function loadProjects() {
     try {
@@ -781,80 +800,97 @@ export default function TestPlanManager() {
   return (
     <div className="flex h-screen bg-gray-100 text-sm">
       {/* LEFT: Projects */}
-      <aside className="w-56 bg-white p-4 border-r overflow-auto">
+      <aside className="min-w-56 w-80 bg-gray-50 p-4 border-r resize overflow-x-auto">
         <h3 className="font-bold mb-3">Projects</h3>
+
         {loading && projects.length === 0 ? (
-          <div>Loading projects...</div>
+          <div className="text-gray-500 text-sm">Loading projects...</div>
         ) : (
-          projects.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => {
-                setActiveProjectId(p.id);
-                setActiveReleaseId(null);
-                setActivePlanId(null);
-                setPlanCases([]);
-              }}
-              className={`cursor-pointer p-2 mb-1 rounded ${
-                activeProjectId === p.id
-                  ? "bg-blue-500 text-white"
-                  : "hover:bg-gray-50"
-              }`}
-            >
-              {p.name}
-            </div>
-          ))
+          <ul className="flex flex-col w-full">
+            {projects.map((p, i) => {
+              const isActive = activeProjectId === p.id;
+
+              return (
+                <li
+                  key={p.id}
+                  onClick={() => {
+                    setActiveProjectId(p.id);
+                    setActiveReleaseId(null);
+                    setActivePlanId(null);
+                    setPlanCases([]);
+                  }}
+                  className={`
+              inline-flex items-center px-4 py-3 text-sm font-medium
+              border border-gray-200 -mt-px
+              cursor-pointer
+              ${isActive ? "bg-emerald-400 text-white" : "bg-white hover:bg-gray-100"}
+              ${i === 0 ? "rounded-t-md mt-0" : ""}
+              ${i === projects.length - 1 ? "rounded-b-md" : ""}
+            `}
+                >
+                  {p.name}
+                </li>
+              );
+            })}
+          </ul>
         )}
       </aside>
 
       {/* LEFT-MIDDLE: Releases */}
-      <aside className="w-90 bg-gray-50 p-4 border-r overflow-auto">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold">Releases</h3>
-        </div>
+      <aside className="w-110 bg-gray-50 p-4 border-r overflow-x-auto">
+        <h3 className="font-bold mb-4">Releases</h3>
 
-        <div className="mb-2">
+        {/* ===== ADD NEW RELEASE ===== */}
+        <div className="mb-4">
           <input
-            className="w-full border p-1 rounded mb-1"
+            className="w-full border border-gray-300 px-3 py-2 rounded mb-2 text-sm"
             placeholder="New version (e.g. 2.3.0)"
             value={newReleaseVersion}
             onChange={(e) => setNewReleaseVersion(e.target.value)}
           />
           <button
             onClick={createRelease}
-            className="w-full bg-green-600 text-white py-1 rounded cursor-pointer"
+            className="w-full bg-green-600 text-white py-2 rounded text-sm hover:bg-green-700 transition"
           >
             Add Release
           </button>
         </div>
+
+        {/* ===== RELEASES LIST ===== */}
         {loading && releases.length === 0 ? (
-          <div>Loading releases...</div>
+          <div className="text-gray-500 text-sm">Loading releases...</div>
         ) : (
-          releases.map((r) => (
-            <div key={r.id} className="mb-2">
-              <div
+          <ul className="flex flex-col w-full">
+            {releases.map((r, i) => (
+              <li
+                key={r.id}
+                className={`
+            inline-flex items-center justify-between
+            px-4 py-3 text-sm font-medium
+            border border-gray-200 -mt-px
+            bg-white
+            hover:bg-gray-100 cursor-pointer
+            ${i === 0 ? "rounded-t-md mt-0" : ""}
+            ${i === releases.length - 1 ? "rounded-b-md" : ""}
+            ${activeReleaseId === r.id ? "bg-gray-300 text-black" : ""}
+          `}
                 onClick={() => {
-                  if (editingReleaseId) return;
-                  setActiveReleaseId(r.id);
+                  if (!editingReleaseId) setActiveReleaseId(r.id);
                 }}
-                className={`flex justify-between items-center p-2 rounded ${
-                  activeReleaseId === r.id
-                    ? "bg-gray-300 text-black"
-                    : "hover:bg-gray-200"
-                }`}
               >
+                {/* ===== RELEASE NAME / EDIT ===== */}
                 <div className="flex gap-2 items-center">
                   {editingReleaseId === r.id ? (
                     <>
                       <input
-                        className="border px-2 py-1 rounded text-black bg-white"
+                        className="border px-2 py-1 rounded text-sm bg-white"
                         value={newName}
                         autoFocus
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => setNewName(e.target.value)}
                       />
                       <button
-                        className="px-2 py-1 bg-green-600 text-white rounded cursor-pointer"
+                        className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
                         onClick={(e) => {
                           e.stopPropagation();
                           renameRelease(r.id);
@@ -864,10 +900,8 @@ export default function TestPlanManager() {
                         OK
                       </button>
                       <button
-                        className="px-2 py-1 bg-red-600 text-white rounded cursor-pointer"
-                        onClick={() => {
-                          setEditingReleaseId(null);
-                        }}
+                        className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+                        onClick={() => setEditingReleaseId(null)}
                       >
                         CANCEL
                       </button>
@@ -877,54 +911,60 @@ export default function TestPlanManager() {
                   )}
                 </div>
 
-                {/* ZMIANA */}
+                {/* ===== ACTION BUTTONS ===== */}
                 {editingReleaseId !== r.id && (
-                  <div>
+                  <div className="flex gap-1">
                     <button
-                      className="mx-1 px-2 bg-red-500 text-white rounded cursor-pointer"
+                      className="px-2 py-1 text-xs"
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteRelease(r.id);
                       }}
                     >
-                      Del
+                      <Delete className="cursor-pointer text-rose-500 hover:text-rose-700"></Delete>
                     </button>
-
                     <button
-                      className="mx-1 px-2 bg-blue-500 text-white rounded cursor-pointer"
+                      className="px-2 py-1 text-xs"
                       onClick={(e) => {
                         e.stopPropagation();
                         setEditingReleaseId(r.id);
                         setNewName(r.version);
                       }}
                     >
-                      Rename
+                      <PenLine className="cursor-pointer text-teal-500 hover:text-teal-700"></PenLine>
                     </button>
                   </div>
                 )}
-              </div>
-            </div>
-          ))
+              </li>
+            ))}
+          </ul>
         )}
       </aside>
 
       {/* ADD PLANS TO RELEASE */}
-      <aside className="w-70 bg-gray-50 p-4 border-r overflow-auto">
-        <h3 className="font-bold mb-3">Add Plans to Release</h3>
+      <aside className="w-110 bg-gray-50 p-4 border-r overflow-auto">
+        <h3 className="font-bold mb-4">Add Plans to Release</h3>
 
         {releases.length === 0 && (
-          <div className="text-gray-500">No releases available</div>
+          <div className="text-gray-500 text-sm">No releases available</div>
         )}
 
         {releases.map((release) => {
           const group = releasePlans.find((g) => g.releaseId === release.id);
 
           return (
-            <div key={release.id} className="mb-4 border p-2 rounded bg-white">
-              <div className="font-semibold mb-1">{release.version}</div>
+            <div
+              key={release.id}
+              className="mb-4 border border-gray-200 rounded-md p-2 bg-white"
+            >
+              {/* ===== RELEASE HEADER ===== */}
+              <div className="text-sm font-semibold mb-2 text-gray-700">
+                {release.version}
+              </div>
 
+              {/* ===== ADD PLAN SELECT ===== */}
               <select
-                className="w-full border p-1 rounded mb-1"
+                className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm mb-2 bg-white"
                 onChange={(e) => {
                   const planId = Number(e.target.value);
                   if (!planId) return;
@@ -942,22 +982,36 @@ export default function TestPlanManager() {
                   ))}
               </select>
 
-              {/* Lista przypisanych planów */}
-              <ul className="mt-2 space-y-1">
-                {group?.plans.map((p) => (
+              {/* ===== LIST GROUP ===== */}
+              <ul className="w-full flex flex-col">
+                {group?.plans.map((p, i) => (
                   <li
                     key={p.id}
-                    className="flex justify-between items-center border p-1 rounded"
+                    className={`
+                inline-flex items-center justify-between
+                py-3 px-4 text-sm font-medium
+                border border-gray-200 -mt-px
+                bg-white
+                ${i === 0 ? "rounded-t-md mt-0" : ""}
+                ${i === group.plans.length - 1 ? "rounded-b-md" : ""}
+              `}
                   >
-                    <span>{p.name}</span>
+                    <span className="truncate">{p.name}</span>
+
                     <button
-                      className="px-2 py-0.5 bg-red-500 text-white rounded"
+                      className="px-2 py-1 text-xs transition"
                       onClick={() => removePlanFromRelease(p.id, release.id)}
                     >
-                      Remove
+                      <Delete className="cursor-pointer text-rose-500 hover:text-rose-700"></Delete>
                     </button>
                   </li>
                 ))}
+
+                {group?.plans.length === 0 && (
+                  <li className="text-sm text-gray-400 py-2">
+                    No plans assigned
+                  </li>
+                )}
               </ul>
             </div>
           );
@@ -965,128 +1019,198 @@ export default function TestPlanManager() {
       </aside>
 
       {/* PLANS */}
-      <aside className="w-70 bg-gray-50 p-4 border-r overflow-auto">
-        <h3 className="font-bold mb-3">Plans Library</h3>
+      <aside className="w-110 bg-gray-50 p-4 border-r overflow-auto">
+        <h3 className="font-bold mb-4">Plans Library</h3>
 
-        {/* Tworzenie nowego planu */}
-        <div className="mb-2">
+        {/* Create new plan */}
+        <div className="mb-4">
           <input
-            className="w-full border p-1 rounded mb-1"
+            className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm mb-2"
             placeholder="New plan name"
             value={newPlanName}
             onChange={(e) => setNewPlanName(e.target.value)}
           />
           <button
-            onClick={createPlan} // Tworzy plan w bibliotece, nie przypisany do release
-            className="w-full bg-indigo-600 text-white py-1 rounded"
+            onClick={createPlan}
+            className="w-full bg-indigo-600 text-white py-2 rounded-md text-sm hover:bg-indigo-700 transition"
           >
             Add Plan
           </button>
         </div>
 
-        {/* Lista wszystkich planów w bibliotece */}
         {plansLibrary.length === 0 && (
-          <div className="text-gray-500">No plans in library</div>
+          <div className="text-gray-500 text-sm">No plans in library</div>
         )}
 
-        <ul className="space-y-2">
-          {plansLibrary.map((p) => (
-            <li
-              key={p.id}
-              onClick={() => {
-                if (editingPlanId) return;
-                setActivePlanId(p.id);
-              }}
-              className={`flex justify-between items-center p-2 border rounded bg-white cursor-pointer ${
-                activePlanId === p.id ? "bg-purple-200" : ""
-              }`}
-            >
-              {editingPlanId === p.id ? (
-                <>
-                  <input
-                    className="border px-2 py-1 rounded text-black"
-                    value={newPlanNameEdit}
-                    onChange={(e) => setNewPlanNameEdit(e.target.value)}
-                  />
-                  <button
-                    className="px-2 py-0.5 bg-green-600 text-white rounded"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      renamePlan(p.id);
-                    }}
-                  >
-                    OK
-                  </button>
-                </>
-              ) : (
-                <>
-                  <span>{p.name}</span>
-                  <button
-                    className="px-2 py-0.5 bg-gray-600 text-white rounded"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      clonePlan(p.id);
-                    }}
-                  >
-                    Clone
-                  </button>
-                  <div className="flex gap-1">
+        {plansLibrary.length > 0 && (
+          <ul className="w-full flex flex-col">
+            {plansLibrary.map((p, index) => (
+              <li
+                key={p.id}
+                onClick={() => {
+                  if (editingPlanId) return;
+                  setActivePlanId(p.id);
+                }}
+                className={`
+            inline-flex items-center justify-between gap-x-2
+            py-3 px-4 text-sm font-medium
+            border border-gray-200 -mt-px
+            cursor-pointer transition
+            ${index === 0 ? "rounded-t-lg mt-0" : ""}
+            ${index === plansLibrary.length - 1 ? "rounded-b-lg" : ""}
+            ${
+              activePlanId === p.id
+                ? "bg-indigo-100 text-indigo-700"
+                : "bg-white hover:bg-gray-100"
+            }
+          `}
+              >
+                {editingPlanId === p.id ? (
+                  <div className="flex items-center gap-2 w-full">
+                    <input
+                      className="flex-1 border border-gray-300 px-2 py-1 rounded text-sm"
+                      value={newPlanNameEdit}
+                      onChange={(e) => setNewPlanNameEdit(e.target.value)}
+                    />
                     <button
-                      className="px-2 py-0.5 bg-blue-500 text-white rounded"
+                      className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setEditingPlanId(p.id);
-                        setNewPlanNameEdit(p.name);
+                        renamePlan(p.id);
                       }}
                     >
-                      Rename
-                    </button>
-                    <button
-                      className="px-2 py-0.5 bg-red-500 text-white rounded"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deletePlan(p.id);
-                      }}
-                    >
-                      Delete
+                      OK
                     </button>
                   </div>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
+                ) : (
+                  <>
+                    <span className="truncate">{p.name}</span>
+
+                    <div className="flex gap-1">
+                      <button
+                        className="px-2 py-1 text-xs rounded"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          clonePlan(p.id);
+                        }}
+                      >
+                        <BookCopy className="cursor-pointer text-yellow-500 hover:text-yellow-700"></BookCopy>
+                      </button>
+
+                      <button
+                        className="px-2 py-1 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPlanId(p.id);
+                          setNewPlanNameEdit(p.name);
+                        }}
+                      >
+                        <PenLine className="cursor-pointer text-teal-500 hover:text-teal-700"></PenLine>
+                      </button>
+
+                      <button
+                        className="px-2 py-1 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deletePlan(p.id);
+                        }}
+                      >
+                        <Delete className="cursor-pointer text-rose-500 hover:text-rose-700"></Delete>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </aside>
 
       {/* MIDDLE-RIGHT: Test Cases Library */}
-      <main className="flex-1 p-4 overflow-auto bg-white">
-        <h3 className="font-bold mb-3">Test Cases Library</h3>
+      <aside className="w-80 flex-1 p-6 overflow-auto bg-white">
+        <h3 className="font-bold mb-6 text-lg">Test Cases Library</h3>
 
-        {!activePlanId && (
-          <div className="text-gray-400">Select a plan to add tests</div>
-        )}
+        <div role="tree" className="space-y-2">
+          {tree.map((group) => {
+            const isExpanded = expandedGroups[group.id] ?? false;
 
-        {activePlanId && tree.length === 0 && (
-          <div className="text-gray-400">
-            No test cases in library for this project
-          </div>
-        )}
+            return (
+              <div key={group.id} role="treeitem" aria-expanded={isExpanded}>
+                {/* ===== GROUP HEADER ===== */}
+                <div className="flex items-center gap-x-1">
+                  {/* Toggle Button */}
+                  <button
+                    onClick={() =>
+                      setExpandedGroups((prev) => ({
+                        ...prev,
+                        [group.id]: !isExpanded,
+                      }))
+                    }
+                    className="size-6 flex justify-center items-center rounded-md hover:bg-gray-100 transition"
+                  >
+                    <svg
+                      className={`size-3 transition-transform duration-200 ${
+                        isExpanded ? "rotate-90" : ""
+                      }`}
+                      viewBox="0 0 16 16"
+                      fill="currentColor"
+                    >
+                      <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+                    </svg>
+                  </button>
 
-        {activePlanId &&
-          Array.isArray(tree) &&
-          tree.map((group) => (
-            <TreeNode
-              key={group.id}
-              node={group}
-              addCaseToPlan={addCaseToPlan}
-            />
-          ))}
-      </main>
+                  {/* Group Name */}
+                  <div className="px-1.5 rounded-md cursor-pointer hover:bg-gray-100 transition">
+                    <span className="text-sm font-medium text-gray-800">
+                      {group.name}
+                    </span>
+                  </div>
+                </div>
+
+                {/* ===== COLLAPSE ===== */}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${
+                    isExpanded ? "max-h-96 mt-1" : "max-h-0"
+                  }`}
+                  role="group"
+                >
+                  <div className="ml-3 pl-4 relative before:absolute before:top-0 before:left-0 before:h-full before:border-l before:border-gray-300">
+                    {group.cases.map((tc) => (
+                      <div
+                        key={tc.id}
+                        role="treeitem"
+                        className="px-2 py-1 rounded-md hover:bg-gray-100 transition cursor-pointer flex justify-between items-center"
+                      >
+                        <span className="text-sm text-gray-700">
+                          {tc.title}
+                        </span>
+
+                        <button
+                          onClick={() => addCaseToPlan(tc)}
+                          className="text-xs px-2 py-0.5 bg-green-600 text-white rounded hover:bg-green-700 transition"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    ))}
+
+                    {group.cases.length === 0 && (
+                      <div className="px-2 py-1 text-sm text-gray-400">
+                        No test cases
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </aside>
 
       {/* RIGHT: Plan Content */}
-      <aside className="w-96 p-4 bg-gray-50 border-l overflow-auto">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold">Plan Content</h3>
+      <aside className="w-90 p-6 bg-gray-50 border-l overflow-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-bold text-lg">Plan Content</h3>
           <div className="text-xs text-gray-500">
             Plan ID: {activePlanId ?? "-"}
           </div>
@@ -1096,29 +1220,93 @@ export default function TestPlanManager() {
           <div className="text-gray-400">No tests in plan</div>
         )}
 
-        <ul className="space-y-2">
-          {planCases.map((tc) => (
-            <li
-              key={tc.id}
-              className="flex justify-between items-center p-2 border rounded bg-white"
-            >
-              <div>
-                <div className="text-sm font-medium">{tc.title}</div>
-                <div className="text-xs text-gray-500">
-                  group name: {tc.name}
-                  {/* id: {tc.id} */}
+        {planCases.length > 0 && (
+          <div role="tree" className="space-y-2">
+            {Object.entries(
+              planCases.reduce((acc: Record<string, any[]>, tc) => {
+                const groupName = tc.name || "Ungrouped";
+                if (!acc[groupName]) acc[groupName] = [];
+                acc[groupName].push(tc);
+                return acc;
+              }, {}),
+            ).map(([groupName, cases]) => {
+              const isExpanded: boolean =
+                expandedGroups[groupName as string] ?? true;
+
+              return (
+                <div key={groupName} role="treeitem" aria-expanded={isExpanded}>
+                  {/* ===== GROUP HEADER ===== */}
+                  <div className="flex items-center gap-x-1">
+                    {/* Toggle */}
+                    <button
+                      onClick={() =>
+                        setExpandedGroups((prev) => ({
+                          ...prev,
+                          [groupName]: !isExpanded,
+                        }))
+                      }
+                      className="size-6 flex justify-center items-center rounded-md hover:bg-gray-200 transition"
+                    >
+                      <svg
+                        className={`size-3 transition-transform duration-200 ${
+                          isExpanded ? "rotate-90" : ""
+                        }`}
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                      >
+                        <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+                      </svg>
+                    </button>
+
+                    {/* Group name */}
+                    <div className="px-1.5 rounded-md cursor-pointer hover:bg-gray-200 transition">
+                      <span className="text-sm font-medium text-gray-800">
+                        {groupName}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* ===== COLLAPSE ===== */}
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ${
+                      isExpanded ? "max-h-96 mt-1" : "max-h-0"
+                    }`}
+                    role="group"
+                  >
+                    <div className="ml-3 pl-4 relative before:absolute before:top-0 before:left-0 before:h-full before:border-l before:border-gray-300">
+                      {cases.map((tc) => (
+                        <div
+                          key={tc.id}
+                          role="treeitem"
+                          className="px-2 py-1 rounded-md hover:bg-gray-200 transition flex justify-between items-center"
+                        >
+                          <span className="text-sm text-gray-700">
+                            {tc.title}
+                          </span>
+
+                          <button
+                            className="text-xs px-2 py-0.5 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                            onClick={() => removeCaseFromPlan(tc.id)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+
+                      {cases.length === 0 && (
+                        <div className="px-2 py-1 text-sm text-gray-400">
+                          No test cases in this group
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <button
-                className="px-2 py-0.5 bg-red-500 text-white rounded"
-                onClick={() => removeCaseFromPlan(tc.id)}
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
+              );
+            })}
+          </div>
+        )}
       </aside>
+
       {/* bottom notifications */}
       <div className="fixed bottom-4 left-4">
         {message && (
