@@ -8,6 +8,9 @@ import {
   GetTestPlansByProject,
   deleteTestPlan,
   renameTestPlanService,
+  GetReleasesTestPlansByProject,
+  AddPlanToRelease,
+  RemovePlanFromRelease,
 } from "./test_plans.service";
 
 export async function GetTestPlansController(req: AuthRequest, res: Response) {
@@ -19,7 +22,9 @@ export async function GetTestPlansController(req: AuthRequest, res: Response) {
     }
 
     const result = await GetTestPlans(Number(releasetId));
+
     res.status(200).json(result);
+    console.log("aaaaaa", result);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "internal server error" });
@@ -28,7 +33,7 @@ export async function GetTestPlansController(req: AuthRequest, res: Response) {
 
 export async function CreateTestPlanController(
   req: AuthRequest,
-  res: Response
+  res: Response,
 ) {
   try {
     const { releaseId } = req.params;
@@ -52,7 +57,7 @@ export async function CreateTestPlanController(
       name,
       description || "",
       projectId,
-      userId
+      userId,
     );
 
     return res.status(201).json(created);
@@ -65,15 +70,15 @@ export async function CreateTestPlanController(
 export async function cloneTestPlanController(req: Request, res: Response) {
   try {
     const planId = Number(req.params.planId);
-    const { releaseId } = req.body;
+    //const { releaseId } = req.body;
 
-    if (!planId || !releaseId) {
+    if (!planId) {
       return res
         .status(400)
         .json({ error: "planId and releaseId are required" });
     }
 
-    const cloned = await cloneTestPlan(planId, releaseId);
+    const cloned = await cloneTestPlan(planId);
 
     return res.status(201).json(cloned);
   } catch (err) {
@@ -86,7 +91,7 @@ export async function cloneTestPlanController(req: Request, res: Response) {
 
 export async function GetTestPlansByProjectController(
   req: Request,
-  res: Response
+  res: Response,
 ) {
   try {
     const projectId = Number(req.params.projectId);
@@ -96,6 +101,44 @@ export async function GetTestPlansByProjectController(
     const plans = await GetTestPlansByProject(projectId);
 
     // Opcjonalnie pogrupowanie po release
+    // const grouped = plans.reduce((acc: any, plan: any) => {
+    //   const releaseId = plan.release_id;
+    //   if (!acc[releaseId]) {
+    //     acc[releaseId] = {
+    //       releaseId,
+    //       releaseVersion: plan.release_version,
+    //       plans: [],
+    //     };
+    //   }
+    //   acc[releaseId].plans.push({
+    //     id: plan.id,
+    //     name: plan.name,
+    //     description: plan.description,
+    //     created_by: plan.created_by,
+    //     created_at: plan.created_at,
+    //   });
+    //   return acc;
+    // }, {});
+
+    res.status(200).json(plans);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+export async function GetReleasesTestPlansByProjectController(
+  req: Request,
+  res: Response,
+) {
+  try {
+    const projectId = Number(req.params.projectId);
+    if (!projectId)
+      return res.status(400).json({ error: "projectId is required" });
+
+    const plans = await GetReleasesTestPlansByProject(projectId);
+
+    //Opcjonalnie pogrupowanie po release
     const grouped = plans.reduce((acc: any, plan: any) => {
       const releaseId = plan.release_id;
       if (!acc[releaseId]) {
@@ -124,7 +167,7 @@ export async function GetTestPlansByProjectController(
 
 export async function deleteTestPlanController(
   req: AuthRequest,
-  res: Response
+  res: Response,
 ) {
   try {
     const planId = Number(req.params.planId);
@@ -150,7 +193,7 @@ export async function deleteTestPlanController(
 
 export async function renameTestPlanController(
   req: AuthRequest,
-  res: Response
+  res: Response,
 ) {
   const planId = Number(req.params.planId);
   const { name } = req.body;
@@ -170,5 +213,50 @@ export async function renameTestPlanController(
   } catch (err) {
     console.error("renameTestPlan error:", err);
     res.status(500).json({ message: "Failed to rename test plan" });
+  }
+}
+
+export async function AddPlanToReleaseController(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const { planId, releaseId } = req.body;
+
+    if (!planId || !releaseId) {
+      return res
+        .status(400)
+        .json({ error: "planId and releaseId are required" });
+    }
+
+    await AddPlanToRelease(Number(planId), Number(releaseId));
+
+    res.status(200).json({ message: "Plan added to release successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+export async function RemovePlanFromReleaseController(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const planId = Number(req.params.planId);
+    const releaseId = Number(req.params.releaseId);
+
+    if (!planId || !releaseId) {
+      return res
+        .status(400)
+        .json({ error: "planId and releaseId are required" });
+    }
+
+    await RemovePlanFromRelease(Number(planId), Number(releaseId));
+
+    res.status(200).json({ message: "Plan removed from release successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
 }

@@ -147,6 +147,9 @@ export default function TestPlanManager() {
   const [releases, setReleases] = useState<Release[]>([]);
   const [activeReleaseId, setActiveReleaseId] = useState<number | null>(null);
   const [plans, setPlans] = useState<ReleaseGroup[]>([]);
+  const [plansLibrary, setPlansLibrary] = useState<Plan[]>([]);
+  const [releasePlans, setReleasePlans] = useState<ReleaseGroup[]>([]);
+
   const [activePlanId, setActivePlanId] = useState<number | null>(null);
   const [tree, setTree] = useState<TestGroupNode[]>([]);
   const [planCases, setPlanCases] = useState<PlanCase[]>([]);
@@ -185,11 +188,11 @@ export default function TestPlanManager() {
     try {
       setLoading(true);
       const data = await apiFetch(
-        `http://localhost:4000/api/releases/${activeProjectId}`
+        `http://localhost:4000/api/releases/${activeProjectId}`,
       );
       setReleases(data);
       setActiveReleaseId((prev) =>
-        data.find((r: Release) => r.id === prev) ? prev : data[0]?.id ?? null
+        data.find((r: Release) => r.id === prev) ? prev : (data[0]?.id ?? null),
       );
     } catch (err: any) {
       console.error(err);
@@ -208,9 +211,57 @@ export default function TestPlanManager() {
 
     loadReleases();
     // reset downstream
-    setPlans([]);
+    //setPlans([]);
     setActivePlanId(null);
     setPlanCases([]);
+  }, [activeProjectId]);
+
+  async function loadPlansLibrary() {
+    if (!activeProjectId) return;
+
+    try {
+      const data = await apiFetch(
+        `http://localhost:4000/api/test_plans/${activeProjectId}`,
+      );
+      console.log("plans library =>", data);
+      setPlansLibrary(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    }
+  }
+
+  useEffect(() => {
+    if (!activeProjectId) {
+      setPlansLibrary([]);
+      return;
+    }
+
+    loadPlansLibrary();
+  }, [activeProjectId]);
+
+  async function loadReleasePlans() {
+    if (!activeProjectId) return;
+
+    try {
+      const data = await apiFetch(
+        `http://localhost:4000/api/test_plans/${activeProjectId}/releases`,
+      );
+      console.log("plans for releases " + data);
+      setReleasePlans(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    }
+  }
+
+  useEffect(() => {
+    if (!activeProjectId) {
+      setReleasePlans([]);
+      return;
+    }
+
+    loadReleasePlans();
   }, [activeProjectId]);
 
   /* ----------------------------- Load plans grouped by releases when project changes ----------------------------- */
@@ -218,11 +269,11 @@ export default function TestPlanManager() {
     try {
       setLoading(true);
       const data = await apiFetch(
-        `http://localhost:4000/api/test_plans/${activeProjectId}`
+        `http://localhost:4000/api/test_plans/${activeProjectId}`,
       );
       if (Array.isArray(data) && data.length > 0) {
         if (data[0].releaseId !== undefined && Array.isArray(data[0].plans)) {
-          setPlans(data);
+          //setPlans(data);
         } else {
           const grouped = (data as any[]).reduce(
             (acc: Record<number, ReleaseGroup>, row: any) => {
@@ -244,18 +295,18 @@ export default function TestPlanManager() {
               });
               return acc;
             },
-            {}
+            {},
           );
-          setPlans(Object.values(grouped));
+          //setPlans(Object.values(grouped));
         }
       } else {
-        setPlans([]);
+        //setPlans([]);
       }
 
       if (activeReleaseId) {
         const rg = (data as any[]).find(
           (g: any) =>
-            g.releaseId === activeReleaseId || g.release_id === activeReleaseId
+            g.releaseId === activeReleaseId || g.release_id === activeReleaseId,
         );
         const firstPlan = rg?.plans?.[0] ?? null;
         setActivePlanId(firstPlan?.id ?? null);
@@ -272,21 +323,21 @@ export default function TestPlanManager() {
     }
   }
 
-  useEffect(() => {
-    if (!activeProjectId) {
-      setPlans([]);
-      return;
-    }
+  // useEffect(() => {
+  //   if (!activeProjectId) {
+  //     //setPlans([]);
+  //     return;
+  //   }
 
-    loadPlansGrouped();
-    setPlanCases([]);
-  }, [activeProjectId]);
+  //   loadPlansGrouped();
+  //   setPlanCases([]);
+  // }, [activeProjectId]);
 
   async function loadTree() {
     try {
       setLoading(true);
       const data: TestCaseItem[] = await apiFetch(
-        `http://localhost:4000/api/test_cases/${activeProjectId}/all`
+        `http://localhost:4000/api/test_cases/${activeProjectId}/all`,
       );
       console.log(data);
       setTree(buildTreeFromCases(data));
@@ -315,7 +366,7 @@ export default function TestPlanManager() {
     try {
       setLoading(true);
       const data: PlanCases[] = await apiFetch(
-        `http://localhost:4000/api/test_plan_cases/${activePlanId}`
+        `http://localhost:4000/api/test_plan_cases/${activePlanId}`,
       );
       const normalized: PlanCase[] = data.map((item) => ({
         id: item.plan_case_id,
@@ -374,7 +425,7 @@ export default function TestPlanManager() {
       setReleases((prev) => prev.filter((r) => r.id !== releaseId));
       if (activeReleaseId === releaseId) {
         setActiveReleaseId(null);
-        setPlans([]);
+        //setPlans([]);
         setActivePlanId(null);
       }
 
@@ -408,49 +459,67 @@ export default function TestPlanManager() {
     }
   }
 
+  // async function createPlan() {
+  //   if (!activeReleaseId || !newPlanName.trim()) return;
+
+  //   try {
+  //     setLoading(true);
+
+  //     await apiFetch(
+  //       `http://localhost:4000/api/test_plans/new/${activeReleaseId}`,
+  //       {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({ name: newPlanName.trim(), description: "" }),
+  //       },
+  //     );
+
+  //     await reloadAll();
+  //     // setPlans((prev) => {
+  //     //   const idx = prev.findIndex((rg) => rg.releaseId === activeReleaseId);
+  //     //   if (idx !== -1) {
+  //     //     const newGroups = [...prev];
+  //     //     newGroups[idx] = { ...newGroups[idx], plans: [created, ...newGroups[idx].plans] };
+  //     //     return newGroups;
+  //     //   } else {
+
+  //     //     const rel = releases.find((r) => r.id === activeReleaseId);
+  //     //     const newGroup: ReleaseGroup = {
+  //     //       releaseId: activeReleaseId,
+  //     //       releaseVersion: rel?.version ?? `Release ${activeReleaseId}`,
+  //     //       plans: [created],
+  //     //     };
+  //     //     return [newGroup, ...prev];
+  //     //   }
+  //     // });
+  //     // setNewPlanName("");
+  //     // setActivePlanId(created.id);
+
+  //     setMessage("Plan created");
+  //   } catch (err: any) {
+  //     console.error(err);
+  //     setError(err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }
   async function createPlan() {
-    if (!activeReleaseId || !newPlanName.trim()) return;
+    if (!activeProjectId || !newPlanName.trim()) return;
 
-    try {
-      setLoading(true);
+    const created = await apiFetch(
+      `http://localhost:4000/api/test_plans/new/${activeReleaseId}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newPlanName.trim(),
+          projectId: activeProjectId,
+        }),
+      },
+    );
 
-      await apiFetch(
-        `http://localhost:4000/api/test_plans/new/${activeReleaseId}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: newPlanName.trim(), description: "" }),
-        }
-      );
-
-      await reloadAll();
-      // setPlans((prev) => {
-      //   const idx = prev.findIndex((rg) => rg.releaseId === activeReleaseId);
-      //   if (idx !== -1) {
-      //     const newGroups = [...prev];
-      //     newGroups[idx] = { ...newGroups[idx], plans: [created, ...newGroups[idx].plans] };
-      //     return newGroups;
-      //   } else {
-
-      //     const rel = releases.find((r) => r.id === activeReleaseId);
-      //     const newGroup: ReleaseGroup = {
-      //       releaseId: activeReleaseId,
-      //       releaseVersion: rel?.version ?? `Release ${activeReleaseId}`,
-      //       plans: [created],
-      //     };
-      //     return [newGroup, ...prev];
-      //   }
-      // });
-      // setNewPlanName("");
-      // setActivePlanId(created.id);
-
-      setMessage("Plan created");
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    setPlansLibrary((prev) => [created, ...prev]);
+    setNewPlanName("");
   }
 
   async function renamePlan(planId: number) {
@@ -462,7 +531,9 @@ export default function TestPlanManager() {
         body: JSON.stringify({ name: newPlanNameEdit }),
       });
 
-      await loadPlansGrouped();
+      await loadPlansLibrary();
+      await loadReleasePlans();
+      setEditingPlanId(null);
     } catch (err: any) {
       console.error(err);
       setError(err.message);
@@ -479,7 +550,13 @@ export default function TestPlanManager() {
       await apiFetch(`http://localhost:4000/api/test_plans/${planId}`, {
         method: "DELETE",
       });
-      await reloadAll();
+      await loadPlansLibrary();
+      await loadReleasePlans();
+
+      if (activePlanId === planId) {
+        setActivePlanId(null);
+        setPlanCases([]);
+      }
 
       setMessage("Plan deleted");
     } catch (err: any) {
@@ -490,13 +567,35 @@ export default function TestPlanManager() {
     }
   }
 
-  async function clonePlan(planId: number) {
-    if (!activeReleaseId) {
-      setError("No active release selected");
-      return;
-    }
-    if (!confirm("Clone this plan into the current release?")) return;
+  async function removePlanFromRelease(planId: number, releaseId: number) {
+    console.log("Removing plan", planId, "from release", releaseId);
 
+    try {
+      await apiFetch(
+        `http://localhost:4000/api/test_plans/${planId}/${releaseId}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      console.log("remove: ", planId, releaseId);
+
+      setReleasePlans((prev) =>
+        prev.map((group) => {
+          if (group.releaseId !== releaseId) return group;
+
+          return {
+            ...group,
+            plans: group.plans.filter((p) => p.id !== planId),
+          };
+        }),
+      );
+    } catch (err) {
+      console.error("Failed to remove plan from release", err);
+    }
+  }
+
+  async function clonePlan(planId: number) {
     try {
       setLoading(true);
 
@@ -505,29 +604,23 @@ export default function TestPlanManager() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ releaseId: activeReleaseId }),
-        }
+        },
       );
 
-      setPlans((prev) => {
-        const idx = prev.findIndex((rg) => rg.releaseId === activeReleaseId);
-        if (idx !== -1) {
-          const newGroups = [...prev];
-          newGroups[idx] = {
-            ...newGroups[idx],
-            plans: [cloned, ...newGroups[idx].plans],
-          };
-          return newGroups;
-        } else {
-          const rel = releases.find((r) => r.id === activeReleaseId);
-          const newGroup: ReleaseGroup = {
+      await loadPlansLibrary();
+
+      if (activeReleaseId) {
+        await apiFetch(`http://localhost:4000/api/release_plans`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            planId: cloned.id,
             releaseId: activeReleaseId,
-            releaseVersion: rel?.version ?? `Release ${activeReleaseId}`,
-            plans: [cloned],
-          };
-          return [newGroup, ...prev];
-        }
-      });
+          }),
+        });
+
+        await loadReleasePlans();
+      }
 
       setActivePlanId(cloned.id);
       setMessage("Plan cloned successfully");
@@ -538,6 +631,55 @@ export default function TestPlanManager() {
       setLoading(false);
     }
   }
+
+  // async function clonePlan(planId: number) {
+  //   if (!activeReleaseId) {
+  //     setError("No active release selected");
+  //     return;
+  //   }
+  //   if (!confirm("Clone this plan into the current release?")) return;
+
+  //   try {
+  //     setLoading(true);
+
+  //     const cloned: any = await apiFetch(
+  //       `http://localhost:4000/api/test_plans/${planId}/clone`,
+  //       {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({ releaseId: activeReleaseId }),
+  //       },
+  //     );
+
+  //     setPlans((prev) => {
+  //       const idx = prev.findIndex((rg) => rg.releaseId === activeReleaseId);
+  //       if (idx !== -1) {
+  //         const newGroups = [...prev];
+  //         newGroups[idx] = {
+  //           ...newGroups[idx],
+  //           plans: [cloned, ...newGroups[idx].plans],
+  //         };
+  //         return newGroups;
+  //       } else {
+  //         const rel = releases.find((r) => r.id === activeReleaseId);
+  //         const newGroup: ReleaseGroup = {
+  //           releaseId: activeReleaseId,
+  //           releaseVersion: rel?.version ?? `Release ${activeReleaseId}`,
+  //           plans: [cloned],
+  //         };
+  //         return [newGroup, ...prev];
+  //       }
+  //     });
+
+  //     setActivePlanId(cloned.id);
+  //     setMessage("Plan cloned successfully");
+  //   } catch (err: any) {
+  //     console.error(err);
+  //     setError(err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }
 
   /* ----------------------------- Plan cases operations ----------------------------- */
   async function addCaseToPlan(testCase: TestCase) {
@@ -626,6 +768,15 @@ export default function TestPlanManager() {
     }
   }
 
+  async function addPlanToRelease(planId: number, releaseId: number) {
+    await apiFetch(`http://localhost:4000/api/test_plans/addPlan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planId, releaseId }),
+    });
+
+    await loadReleasePlans();
+  }
   /* ----------------------------- UI Rendering ----------------------------- */
   return (
     <div className="flex h-screen bg-gray-100 text-sm">
@@ -685,9 +836,6 @@ export default function TestPlanManager() {
                 onClick={() => {
                   if (editingReleaseId) return;
                   setActiveReleaseId(r.id);
-                  const group = plans.find((g) => g.releaseId === r.id);
-                  setActivePlanId(group?.plans?.[0]?.id ?? null);
-                  setPlanCases([]);
                 }}
                 className={`flex justify-between items-center p-2 rounded ${
                   activeReleaseId === r.id
@@ -760,10 +908,67 @@ export default function TestPlanManager() {
         )}
       </aside>
 
-      {/* MIDDLE: Plans (grouped by release) */}
+      {/* ADD PLANS TO RELEASE */}
       <aside className="w-70 bg-gray-50 p-4 border-r overflow-auto">
-        <h3 className="font-bold mb-3">Plans</h3>
+        <h3 className="font-bold mb-3">Add Plans to Release</h3>
 
+        {releases.length === 0 && (
+          <div className="text-gray-500">No releases available</div>
+        )}
+
+        {releases.map((release) => {
+          const group = releasePlans.find((g) => g.releaseId === release.id);
+
+          return (
+            <div key={release.id} className="mb-4 border p-2 rounded bg-white">
+              <div className="font-semibold mb-1">{release.version}</div>
+
+              <select
+                className="w-full border p-1 rounded mb-1"
+                onChange={(e) => {
+                  const planId = Number(e.target.value);
+                  if (!planId) return;
+                  addPlanToRelease(planId, release.id);
+                }}
+              >
+                <option value="">-- Add plan --</option>
+
+                {plansLibrary
+                  .filter((p) => !group?.plans.some((rp) => rp.id === p.id))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </select>
+
+              {/* Lista przypisanych planów */}
+              <ul className="mt-2 space-y-1">
+                {group?.plans.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex justify-between items-center border p-1 rounded"
+                  >
+                    <span>{p.name}</span>
+                    <button
+                      className="px-2 py-0.5 bg-red-500 text-white rounded"
+                      onClick={() => removePlanFromRelease(p.id, release.id)}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </aside>
+
+      {/* PLANS */}
+      <aside className="w-70 bg-gray-50 p-4 border-r overflow-auto">
+        <h3 className="font-bold mb-3">Plans Library</h3>
+
+        {/* Tworzenie nowego planu */}
         <div className="mb-2">
           <input
             className="w-full border p-1 rounded mb-1"
@@ -772,116 +977,85 @@ export default function TestPlanManager() {
             onChange={(e) => setNewPlanName(e.target.value)}
           />
           <button
-            onClick={createPlan}
+            onClick={createPlan} // Tworzy plan w bibliotece, nie przypisany do release
             className="w-full bg-indigo-600 text-white py-1 rounded"
           >
             Add Plan
           </button>
         </div>
 
-        {/* Render grouped plans safely */}
-        {plans.length === 0 && (
-          <div className="text-gray-500">No plans for this project</div>
+        {/* Lista wszystkich planów w bibliotece */}
+        {plansLibrary.length === 0 && (
+          <div className="text-gray-500">No plans in library</div>
         )}
 
-        {plans.map((releaseGroup) => (
-          <div key={releaseGroup.releaseId} className="mb-4">
-            <div className="font-bold mb-2">{releaseGroup.releaseVersion}</div>
-
-            {Array.isArray(releaseGroup.plans) &&
-            releaseGroup.plans.length > 0 ? (
-              releaseGroup.plans.map((p) => (
-                <div
-                  onClick={() => {
-                    if (editingPlanId) return;
-                    setActivePlanId(p.id);
-                  }}
-                  className={`flex justify-between items-center p-2 mb-1 rounded ${
-                    activePlanId === p.id
-                      ? "bg-purple-500 text-white"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  <div className="flex gap-2 items-center">
-                    {editingPlanId === p.id ? (
-                      <>
-                        <input
-                          className="border px-2 py-1 rounded text-black bg-white"
-                          value={newPlanNameEdit}
-                          autoFocus
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => setNewPlanNameEdit(e.target.value)}
-                        />
-
-                        <button
-                          className="px-2 py-1 bg-green-600 text-white rounded cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            renamePlan(p.id);
-                            setEditingPlanId(null);
-                          }}
-                        >
-                          OK
-                        </button>
-
-                        <button
-                          className="px-2 py-1 bg-red-600 text-white rounded cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingPlanId(null);
-                          }}
-                        >
-                          CANCEL
-                        </button>
-                      </>
-                    ) : (
-                      <span>{p.name}</span>
-                    )}
+        <ul className="space-y-2">
+          {plansLibrary.map((p) => (
+            <li
+              key={p.id}
+              onClick={() => {
+                if (editingPlanId) return;
+                setActivePlanId(p.id);
+              }}
+              className={`flex justify-between items-center p-2 border rounded bg-white cursor-pointer ${
+                activePlanId === p.id ? "bg-purple-200" : ""
+              }`}
+            >
+              {editingPlanId === p.id ? (
+                <>
+                  <input
+                    className="border px-2 py-1 rounded text-black"
+                    value={newPlanNameEdit}
+                    onChange={(e) => setNewPlanNameEdit(e.target.value)}
+                  />
+                  <button
+                    className="px-2 py-0.5 bg-green-600 text-white rounded"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      renamePlan(p.id);
+                    }}
+                  >
+                    OK
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span>{p.name}</span>
+                  <button
+                    className="px-2 py-0.5 bg-gray-600 text-white rounded"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clonePlan(p.id);
+                    }}
+                  >
+                    Clone
+                  </button>
+                  <div className="flex gap-1">
+                    <button
+                      className="px-2 py-0.5 bg-blue-500 text-white rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingPlanId(p.id);
+                        setNewPlanNameEdit(p.name);
+                      }}
+                    >
+                      Rename
+                    </button>
+                    <button
+                      className="px-2 py-0.5 bg-red-500 text-white rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deletePlan(p.id);
+                      }}
+                    >
+                      Delete
+                    </button>
                   </div>
-
-                  {editingPlanId !== p.id && (
-                    <div className="flex gap-1">
-                      <button
-                        className="px-2 bg-yellow-500 text-white rounded"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          clonePlan(p.id);
-                        }}
-                      >
-                        Clone
-                      </button>
-
-                      <button
-                        className="px-2 bg-red-500 text-white rounded"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deletePlan(p.id);
-                        }}
-                      >
-                        Del
-                      </button>
-
-                      <button
-                        className="px-2 bg-blue-500 text-white rounded"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingPlanId(p.id);
-                          setNewPlanNameEdit(p.name);
-                        }}
-                      >
-                        Rename
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))
-            ) : (
-              <div className="text-sm text-gray-400">
-                No plans in this release
-              </div>
-            )}
-          </div>
-        ))}
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
       </aside>
 
       {/* MIDDLE-RIGHT: Test Cases Library */}
