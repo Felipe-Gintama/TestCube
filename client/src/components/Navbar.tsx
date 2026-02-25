@@ -18,7 +18,7 @@ export default function Navbar() {
     { to: "/users", label: "Users" },
     { to: "/testCasesManagement", label: "Test Cases" },
     { to: "/testPlans", label: "Test Plans" },
-    { to: "/issues", label: "Github Issues" },
+    //{ to: "/issues", label: "Github Issues" },
   ];
 
   return (

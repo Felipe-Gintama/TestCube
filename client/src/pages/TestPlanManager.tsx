@@ -165,6 +165,8 @@ export default function TestPlanManager() {
   const [plans, setPlans] = useState<ReleaseGroup[]>([]);
   const [plansLibrary, setPlansLibrary] = useState<Plan[]>([]);
   const [releasePlans, setReleasePlans] = useState<ReleaseGroup[]>([]);
+  const [selectedCases, setSelectedCases] = useState<number[]>([]);
+  const [selectedPlanCases, setSelectedPlanCases] = useState<number[]>([]);
 
   const [activePlanId, setActivePlanId] = useState<number | null>(null);
   const [tree, setTree] = useState<TestGroupNode[]>([]);
@@ -725,7 +727,7 @@ export default function TestPlanManager() {
   }
 
   async function removeCaseFromPlan(testCaseId: number) {
-    if (!confirm("Delete test from plan?")) return;
+    //if (!confirm("Delete test from plan?")) return;
     if (!activePlanId) return;
     try {
       setLoading(true);
@@ -796,6 +798,43 @@ export default function TestPlanManager() {
 
     await loadReleasePlans();
   }
+
+  const toggleCase = (id: number) => {
+    setSelectedCases((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
+    );
+  };
+
+  const toggleGroup = (groupId: number) => {
+    const group = tree.find((g) => g.id === groupId);
+    if (!group) return;
+
+    const groupCaseIds = group.cases.map((c) => c.id);
+    const allSelected = groupCaseIds.every((id) => selectedCases.includes(id));
+
+    setSelectedCases((prev) =>
+      allSelected
+        ? prev.filter((id) => !groupCaseIds.includes(id))
+        : [...new Set([...prev, ...groupCaseIds])],
+    );
+  };
+
+  const togglePlanCase = (id: number) => {
+    setSelectedPlanCases((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
+    );
+  };
+
+  const togglePlanGroup = (groupName: string, cases: any[]) => {
+    const groupIds = cases.map((c) => c.id);
+    const allSelected = groupIds.every((id) => selectedPlanCases.includes(id));
+
+    setSelectedPlanCases((prev) =>
+      allSelected
+        ? prev.filter((id) => !groupIds.includes(id))
+        : [...new Set([...prev, ...groupIds])],
+    );
+  };
   /* ----------------------------- UI Rendering ----------------------------- */
   return (
     <div className="flex h-screen bg-gray-100 text-sm">
@@ -1130,6 +1169,24 @@ export default function TestPlanManager() {
       <aside className="w-80 flex-1 p-6 overflow-auto bg-white">
         <h3 className="font-bold mb-6 text-lg">Test Cases Library</h3>
 
+        <div className="flex justify-between items-center mb-4">
+          <button
+            disabled={selectedCases.length === 0}
+            onClick={() => {
+              const casesToAdd = tree
+                .flatMap((g) => g.cases)
+                .filter((tc) => selectedCases.includes(tc.id));
+
+              casesToAdd.forEach((tc) => addCaseToPlan(tc));
+
+              setSelectedCases([]);
+            }}
+            className="px-3 py-1 bg-green-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            Add Selected ({selectedCases.length})
+          </button>
+        </div>
+
         <div role="tree" className="space-y-2">
           {tree.map((group) => {
             const isExpanded = expandedGroups[group.id] ?? false;
@@ -1137,34 +1194,43 @@ export default function TestPlanManager() {
             return (
               <div key={group.id} role="treeitem" aria-expanded={isExpanded}>
                 {/* ===== GROUP HEADER ===== */}
-                <div className="flex items-center gap-x-1">
-                  {/* Toggle Button */}
-                  <button
-                    onClick={() =>
-                      setExpandedGroups((prev) => ({
-                        ...prev,
-                        [group.id]: !isExpanded,
-                      }))
-                    }
-                    className="size-6 flex justify-center items-center rounded-md hover:bg-gray-100 transition"
-                  >
-                    <svg
-                      className={`size-3 transition-transform duration-200 ${
-                        isExpanded ? "rotate-90" : ""
-                      }`}
-                      viewBox="0 0 16 16"
-                      fill="currentColor"
+                <div className="flex items-center justify-between pr-2">
+                  <div className="flex items-center gap-x-1">
+                    {/* Toggle Button */}
+                    <button
+                      onClick={() =>
+                        setExpandedGroups((prev) => ({
+                          ...prev,
+                          [group.id]: !isExpanded,
+                        }))
+                      }
+                      className="size-6 flex justify-center items-center rounded-md hover:bg-gray-100 transition"
                     >
-                      <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
-                    </svg>
-                  </button>
+                      <svg
+                        className={`size-3 transition-transform duration-200 ${
+                          isExpanded ? "rotate-90" : ""
+                        }`}
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                      >
+                        <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+                      </svg>
+                    </button>
 
-                  {/* Group Name */}
-                  <div className="px-1.5 rounded-md cursor-pointer hover:bg-gray-100 transition">
                     <span className="text-sm font-medium text-gray-800">
                       {group.name}
                     </span>
                   </div>
+
+                  <input
+                    type="checkbox"
+                    checked={
+                      group.cases.length > 0 &&
+                      group.cases.every((c) => selectedCases.includes(c.id))
+                    }
+                    onChange={() => toggleGroup(group.id)}
+                    className="size-4"
+                  />
                 </div>
 
                 {/* ===== COLLAPSE ===== */}
@@ -1179,18 +1245,18 @@ export default function TestPlanManager() {
                       <div
                         key={tc.id}
                         role="treeitem"
-                        className="px-2 py-1 rounded-md hover:bg-gray-100 transition cursor-pointer flex justify-between items-center"
+                        className="px-2 py-1 rounded-md hover:bg-gray-100 transition flex justify-between items-center"
                       >
                         <span className="text-sm text-gray-700">
                           {tc.title}
                         </span>
 
-                        <button
-                          onClick={() => addCaseToPlan(tc)}
-                          className="text-xs px-2 py-0.5 bg-green-600 text-white rounded hover:bg-green-700 transition"
-                        >
-                          Add
-                        </button>
+                        <input
+                          type="checkbox"
+                          checked={selectedCases.includes(tc.id)}
+                          onChange={() => toggleCase(tc.id)}
+                          className="size-4"
+                        />
                       </div>
                     ))}
 
@@ -1219,6 +1285,20 @@ export default function TestPlanManager() {
         {planCases.length === 0 && (
           <div className="text-gray-400">No tests in plan</div>
         )}
+        {planCases.length > 0 && (
+          <div className="flex justify-between items-center mb-4">
+            <button
+              disabled={selectedPlanCases.length === 0}
+              onClick={() => {
+                selectedPlanCases.forEach((id) => removeCaseFromPlan(id));
+                setSelectedPlanCases([]);
+              }}
+              className="px-3 py-1 bg-red-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              Remove ({selectedPlanCases.length})
+            </button>
+          </div>
+        )}
 
         {planCases.length > 0 && (
           <div role="tree" className="space-y-2">
@@ -1236,34 +1316,42 @@ export default function TestPlanManager() {
               return (
                 <div key={groupName} role="treeitem" aria-expanded={isExpanded}>
                   {/* ===== GROUP HEADER ===== */}
-                  <div className="flex items-center gap-x-1">
-                    {/* Toggle */}
-                    <button
-                      onClick={() =>
-                        setExpandedGroups((prev) => ({
-                          ...prev,
-                          [groupName]: !isExpanded,
-                        }))
-                      }
-                      className="size-6 flex justify-center items-center rounded-md hover:bg-gray-200 transition"
-                    >
-                      <svg
-                        className={`size-3 transition-transform duration-200 ${
-                          isExpanded ? "rotate-90" : ""
-                        }`}
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
+                  <div className="flex items-center justify-between pr-2">
+                    <div className="flex items-center gap-x-1">
+                      <button
+                        onClick={() =>
+                          setExpandedGroups((prev) => ({
+                            ...prev,
+                            [groupName]: !isExpanded,
+                          }))
+                        }
+                        className="size-6 flex justify-center items-center rounded-md hover:bg-gray-200 transition"
                       >
-                        <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
-                      </svg>
-                    </button>
+                        <svg
+                          className={`size-3 transition-transform duration-200 ${
+                            isExpanded ? "rotate-90" : ""
+                          }`}
+                          viewBox="0 0 16 16"
+                          fill="currentColor"
+                        >
+                          <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+                        </svg>
+                      </button>
 
-                    {/* Group name */}
-                    <div className="px-1.5 rounded-md cursor-pointer hover:bg-gray-200 transition">
                       <span className="text-sm font-medium text-gray-800">
                         {groupName}
                       </span>
                     </div>
+
+                    <input
+                      type="checkbox"
+                      checked={
+                        cases.length > 0 &&
+                        cases.every((c) => selectedPlanCases.includes(c.id))
+                      }
+                      onChange={() => togglePlanGroup(groupName, cases)}
+                      className="size-4"
+                    />
                   </div>
 
                   {/* ===== COLLAPSE ===== */}
@@ -1284,12 +1372,12 @@ export default function TestPlanManager() {
                             {tc.title}
                           </span>
 
-                          <button
-                            className="text-xs px-2 py-0.5 bg-red-500 text-white rounded hover:bg-red-600 transition"
-                            onClick={() => removeCaseFromPlan(tc.id)}
-                          >
-                            Remove
-                          </button>
+                          <input
+                            type="checkbox"
+                            checked={selectedPlanCases.includes(tc.id)}
+                            onChange={() => togglePlanCase(tc.id)}
+                            className="size-4"
+                          />
                         </div>
                       ))}
 

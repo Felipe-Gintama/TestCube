@@ -31,3 +31,8 @@ app.use("/api/reports", reportsRouter);
 app.use("/api/github", githubRouter);
 
 app.listen(4000, () => console.log("Server running on http://localhost:4000"));
+
+// const PORT = Number(process.env.PORT) || 5000;
+// app.listen(PORT, "0.0.0.0", () =>
+//   console.log(`Backend działa na porcie ${PORT}`),
+// );

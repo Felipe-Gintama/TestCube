@@ -73,6 +73,8 @@ export default function TestingPage() {
   // -----------------------------
   // UI State
   // -----------------------------
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const [projects, setProjects] = useState<{ id: number; name: string }[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
 
@@ -527,10 +529,12 @@ export default function TestingPage() {
     onToggle: (id: number) => void;
   };
 
+  // TestItem teraz zwraca <td> zamiast div
   function TestItem({ test, checked, onToggle }: TestItemProps) {
     const onTestWindowClosed = async () => {
-      await FetchTreeForRun();
+      await refreshTableView();
     };
+
     const openTestWindow = () => {
       const width = 900;
       const height = 700;
@@ -550,28 +554,92 @@ export default function TestingPage() {
         }
       }, 500);
     };
-    const bgClass = statusBgMap[test.status ?? ""] ?? "bg-white";
+
+    const bgClass = statusBgMap[test.status ?? "untested"] ?? "bg-white";
 
     return (
-      <div className={`flex items-center gap-2 mb-1 p-1 rounded ${bgClass}`}>
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={() => onToggle(test.id)}
-        />
-        <span>Name: {test.title} |</span>
-        <span>Status: {test.status} |</span>
-        <span>Assigned to: {test.assigned_to_name ?? "unassigned"}</span>
-
-        <button
-          onClick={openTestWindow}
-          className="ml-auto px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+      <>
+        <td className="px-4 py-2 text-center">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={() => onToggle(test.id)}
+          />
+        </td>
+        <td className="px-4 py-2 whitespace-nowrap">{test.title}</td>
+        <td
+          className={`px-4 py-2 whitespace-nowrap ${bgClass} text-sm font-medium rounded`}
         >
-          Do test
-        </button>
-      </div>
+          {test.status ?? "untested"}
+        </td>
+        <td className="px-4 py-2 whitespace-nowrap">
+          {test.assigned_to_name ?? "unassigned"}
+        </td>
+        <td className="px-4 py-2 text-center">
+          <button
+            onClick={openTestWindow}
+            className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+          >
+            Do test
+          </button>
+        </td>
+      </>
     );
   }
+  const refreshTableView = async () => {
+    if (!token || !activeRunId) return;
+
+    const rows = await fetchFullTreeForRun(
+      activeRunId,
+      token,
+      activeUser,
+      activeState,
+    );
+
+    const newTree = buildTestTree(rows);
+    setTree(newTree);
+
+    if (selectedNode?.node) {
+      if (selectedNode.type === "group") {
+        const findGroup = (groups: TestGroupNode[]): TestGroupNode | null => {
+          for (const g of groups) {
+            if (g.id === selectedNode.node?.id) return g;
+            if (g.children?.length) {
+              const found = findGroup(g.children);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+
+        const updatedGroup = findGroup(newTree);
+        setSelectedNode(
+          updatedGroup ? { type: "group", node: updatedGroup } : null,
+        );
+      }
+
+      if (selectedNode.type === "test") {
+        const findTest = (groups: TestGroupNode[]): TestCaseItem | null => {
+          for (const g of groups) {
+            const found = g.cases?.find((c) => c.id === selectedNode.node?.id);
+            if (found) return found;
+            if (g.children?.length) {
+              const nested = findTest(g.children);
+              if (nested) return nested;
+            }
+          }
+          return null;
+        };
+
+        const updatedTest = findTest(newTree);
+        setSelectedNode(
+          updatedTest ? { type: "test", node: updatedTest } : null,
+        );
+      }
+    }
+
+    setRefreshKey((prev) => prev + 1);
+  };
 
   function SelectedNodeViewer({
     selectedNode,
@@ -647,7 +715,7 @@ export default function TestingPage() {
               >
                 {/* ===== HEADER GROUP ===== */}
                 <div
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-t from-emerald-600 to-emerald-800 text-white cursor-pointer rounded-t-lg"
+                  className="flex items-center gap-2 px-2 py-1 bg-gradient-to-t from-emerald-600 to-emerald-800 text-white cursor-pointer rounded-t-lg"
                   onClick={() =>
                     setOpenGroups((prev) => ({
                       ...prev,
@@ -656,7 +724,7 @@ export default function TestingPage() {
                   }
                 >
                   {/* Toggle Button */}
-                  <button className="w-6 h-6 flex justify-center items-center rounded-md hover:bg-gray-100 transition">
+                  <button className="w-6 h-6 flex justify-center items-center rounded-md hover:bg-emerald-400 transition">
                     <svg
                       className={`w-3 h-3 transition-transform duration-200 ${
                         isExpanded ? "rotate-90" : ""
@@ -687,20 +755,23 @@ export default function TestingPage() {
                   }`}
                 >
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead>
+                    <table className="min-w-full table-fixed divide-y divide-gray-200">
+                      <thead className="bg-gray-100 sticky top-0">
                         <tr>
-                          <th className="px-6 py-3 text-start text-xs font-medium text-gray-600 uppercase">
-                            Test ID
+                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-600">
+                            Select
                           </th>
-                          <th className="px-6 py-3 text-start text-xs font-medium text-gray-600 uppercase">
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-600">
                             Test Name
                           </th>
-                          <th className="px-6 py-3 text-start text-xs font-medium text-gray-600 uppercase">
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-600">
                             Status
                           </th>
-                          <th className="px-6 py-3 text-end text-xs font-medium text-gray-600 uppercase">
-                            Select
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-600">
+                            Assigned To
+                          </th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-600">
+                            Action
                           </th>
                         </tr>
                       </thead>
@@ -710,7 +781,6 @@ export default function TestingPage() {
                             key={test.id}
                             className={`${i % 2 === 0 ? "bg-gray-50" : "bg-gray-100"} hover:bg-gray-200`}
                           >
-                            {/* Wiersz TestItem */}
                             <TestItem
                               test={test}
                               checked={selectedTestIds.includes(test.id)}
@@ -761,6 +831,7 @@ export default function TestingPage() {
       });
 
       alert("Tests assigned successfully");
+      await refreshTableView();
     } catch (err) {
       console.error(err);
       alert("Failed to assign tests");
@@ -789,6 +860,7 @@ export default function TestingPage() {
       });
 
       alert("removed assignments");
+      await refreshTableView();
     } catch (err) {
       console.error(err);
       alert("Failed to removed assignments tests");
@@ -1355,22 +1427,20 @@ export default function TestingPage() {
     //     </div>
     //   </div>
     // </main>
-    <main className="min-h-screen bg-gray-50 p-4">
+    <main className="min-h-screen bg-gray-100 p-4">
       <div className="flex gap-4 min-h-screen">
         {/* LEWY PANEL */}
-        <div className="flex-[2] bg-white rounded-xl shadow p-4 flex flex-col gap-4 overflow-auto">
+        <div className="max-w-[600px] flex-[2] bg-gray-50 rounded-xl shadow p-4 flex flex-col gap-4 overflow-auto">
           {/* Start nowego test run */}
-          <div className="bg-green-100 p-4 rounded-xl">
-            <h3 className="font-bold mb-3 text-gray-800">
-              Rozpocznij nowy test run
-            </h3>
+          <div className="bg-gray-100 p-4 rounded-xl border border-gray-300">
+            <h3 className="font-bold mb-3 text-gray-800">Start new run</h3>
 
             <select
               value={activeProjectId ?? ""}
               onChange={(e) => setActiveProjectId(Number(e.target.value))}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+              className="flex min-w-48 border border-gray-300 px-3 py-2 rounded-md text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
             >
-              <option value="">Wybierz projekt</option>
+              <option value="">Select project</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -1381,9 +1451,9 @@ export default function TestingPage() {
             <select
               value={activeReleaseId ?? ""}
               onChange={(e) => setActiveReleaseId(Number(e.target.value))}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+              className="flex min-w-48 border border-gray-300 px-3 py-2 rounded-md text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
             >
-              <option value="">Wybierz wersję</option>
+              <option value="">Select release</option>
               {releases.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.version}
@@ -1394,9 +1464,9 @@ export default function TestingPage() {
             <select
               value={activePlanId ?? ""}
               onChange={(e) => setActivePlanId(Number(e.target.value))}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm mb-3 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+              className="flex min-w-48 border border-gray-300 px-3 py-2 rounded-md text-sm mb-3 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
             >
-              <option value="">Wybierz plan</option>
+              <option value="">Select plan</option>
               {plans.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -1406,24 +1476,24 @@ export default function TestingPage() {
 
             <button
               onClick={startNewRun}
-              className="w-full p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition"
+              className="flex min-w-48 p-2 items-center justify-center text-center bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition"
             >
-              Rozpocznij nowy test run
+              Start new test run
             </button>
           </div>
 
           {/* Przypisz użytkownika do run */}
-          <div className="bg-green-100 p-4 rounded-xl">
-            <h3 className="font-bold mb-3 text-gray-800">
-              Przypisz użytkownika do run
+          <div className="bg-gray-100 p-4 rounded-xl border border-gray-300">
+            <h3 className="font-bold mb-3 text-gray-800 flex flex-col">
+              Assign user to run
             </h3>
 
             <select
               value={selectedRun ?? ""}
               onChange={(e) => setSelectedRun(Number(e.target.value))}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+              className="flex min-w-48 border border-gray-300 px-3 py-2 rounded-md text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
             >
-              <option value="">Wybierz run</option>
+              <option value="">Select run</option>
               {availableRuns.map((r) => (
                 <option key={r.test_run_id} value={r.test_run_id}>
                   {r.plan_name} ({r.release_version})
@@ -1434,9 +1504,9 @@ export default function TestingPage() {
             <select
               value={selectedUser ?? ""}
               onChange={(e) => setSelectedUser(Number(e.target.value))}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm mb-3 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+              className="flex min-w-48 border border-gray-300 px-3 py-2 rounded-md text-sm mb-3 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
             >
-              <option value="">Wybierz użytkownika</option>
+              <option value="">Select user</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
@@ -1446,22 +1516,22 @@ export default function TestingPage() {
 
             <button
               onClick={AddUserToRun}
-              className="w-full p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition"
+              className="flex min-w-48 p-2 items-center justify-center text-center bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition"
             >
-              Dodaj użytkownika
+              Add user
             </button>
           </div>
 
           {/* Test runy */}
-          <div className="bg-green-100 p-4 rounded-xl">
-            <h3 className="font-bold mb-3 text-gray-800">Test runy</h3>
+          <div className="bg-gray-100 p-4 rounded-xl border border-gray-300 flex flex-col">
+            <h3 className="font-bold mb-3 text-gray-800">Test runs</h3>
 
             <select
               value={activeRunId ?? ""}
               onChange={(e) => setActiveRunId(Number(e.target.value))}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+              className="flex max-w-48 border border-gray-300 px-3 py-2 rounded-md text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
             >
-              <option value="">Wybierz run</option>
+              <option value="">Select run</option>
               {availableRunsForUser.map((rt) => (
                 <option key={rt.test_run_id} value={rt.test_run_id}>
                   ID: {rt.test_run_id} | {rt.plan_name} | {rt.release_version}
@@ -1477,10 +1547,10 @@ export default function TestingPage() {
                 else if (val === "-1") setActiveUser(-1);
                 else setActiveUser(Number(val));
               }}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+              className="flex max-w-48 border border-gray-300 px-3 py-2 rounded-md text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
             >
-              <option value="">Dowolny</option>
-              <option value="-1">Nikt</option>
+              <option value="">Everyone</option>
+              <option value="-1">Nobody</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
@@ -1499,9 +1569,9 @@ export default function TestingPage() {
                 if (val === "any") setActiveState([...allStatuses]);
                 else setActiveState([val as TestStatus]);
               }}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm mb-3 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+              className="flex max-w-48 border border-gray-300 px-3 py-2 rounded-md text-sm mb-3 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
             >
-              <option value="any">Wszystkie</option>
+              <option value="any">All</option>
               {allStatuses.map((status) => (
                 <option key={status} value={status}>
                   {status}
@@ -1509,18 +1579,18 @@ export default function TestingPage() {
               ))}
             </select>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2">
               <button
                 onClick={FetchTreeForRun}
-                className="flex-1 p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition"
+                className="flex max-w-48 p-2 items-center justify-center text-center bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition"
               >
-                Pokaż testy
+                Show tests
               </button>
               <button
                 onClick={StopRun}
-                className="flex-1 p-2 bg-violet-500 text-white rounded-full hover:bg-violet-600 transition"
+                className="flex max-w-48 p-2 items-center justify-center text-center bg-violet-500 text-white rounded-md hover:bg-violet-600 transition"
               >
-                Zatrzymaj run
+                Stop run
               </button>
             </div>
 
@@ -1530,7 +1600,7 @@ export default function TestingPage() {
             </div>
           </div>
           {/* TestTree */}
-          <div className="bg-green-100 p-4 rounded-xl flex-1 overflow-auto mt-4">
+          <div className="bg-gray-100 p-4 rounded-xl flex-1 overflow-auto mt-4 border border-gray-300">
             <div className="flex gap-3 mb-3">
               <div className="px-3 py-1 rounded bg-green-500 text-white text-sm">
                 OK: {statusCounts.OK}
@@ -1546,7 +1616,7 @@ export default function TestingPage() {
               </div>
             </div>
 
-            <h3 className="font-bold mb-2 text-gray-800">Drzewo testów</h3>
+            <h3 className="font-bold mb-2 text-gray-800">Tests</h3>
 
             <TestTree
               nodes={tree}
@@ -1564,18 +1634,18 @@ export default function TestingPage() {
         </div>
 
         {/* PRAWY PANEL */}
-        <div className="flex-[4] bg-blue-50 rounded-xl shadow p-4 flex flex-col gap-4 overflow-auto">
-          <div className="bg-green-100 p-4 rounded-xl flex-1 overflow-auto">
-            <h3 className="font-bold mb-3 text-gray-800">
-              Przypisane testy i wykonanie
-            </h3>
+        <div className="flex-[4] bg-gray-50 rounded-xl shadow p-4 flex flex-col gap-4 overflow-auto">
+          <div className="bg-gray-50 p-4 rounded-xl flex-1 overflow-auto">
+            <h2 className="font-bold mb-3 text-gray-800">
+              Assigned tests and release
+            </h2>
 
             <select
               value={selectedUserToAssignTests ?? ""}
               onChange={(e) =>
                 setSelectedUserToAssignTests(Number(e.target.value))
               }
-              className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm mb-3 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+              className="max-w-[300px] border border-gray-300 px-3 py-2 rounded-md text-sm mb-3 bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
             >
               <option value="">Wybierz użytkownika</option>
               {users.map((u) => (
@@ -1585,16 +1655,16 @@ export default function TestingPage() {
               ))}
             </select>
 
-            <div className="flex gap-2 mb-3">
+            <div className="flex gap-2 mb-3 max-w-[360px]">
               <button
                 onClick={assignTestsToUser}
-                className="flex-1 p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition"
+                className="flex-1 p-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition"
               >
                 Przypisz testy
               </button>
               <button
                 onClick={removeAssignments}
-                className="flex-1 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                className="flex-1 p-2 bg-rose-600 text-white rounded-md hover:bg-rose-700 transition"
               >
                 Usuń przypisania
               </button>
@@ -1602,6 +1672,7 @@ export default function TestingPage() {
 
             <div className="bg-white rounded-xl p-4 shadow">
               <SelectedNodeViewer
+                key={refreshKey}
                 selectedNode={selectedNode}
                 selectedTestIds={selectedTestIds}
                 setSelectedTestIds={setSelectedTestIds}

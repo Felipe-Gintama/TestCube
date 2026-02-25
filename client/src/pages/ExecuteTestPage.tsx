@@ -92,6 +92,14 @@ export default function ExecuteTestPage() {
     }
   }
 
+  function openGithubIssueWindow() {
+    window.open(
+      "/issues",
+      "_blank",
+      "width=800,height=700,scrollbars=yes,resizable=yes",
+    );
+  }
+
   /* =========================
      RENDER
   ========================= */
@@ -171,8 +179,14 @@ export default function ExecuteTestPage() {
         </div>
       </section>
 
-      {/* FINISH */}
-      <div className="flex justify-center pt-4">
+      <div className="flex justify-center gap-4 pt-4">
+        <button
+          onClick={openGithubIssueWindow}
+          className="px-6 py-3 bg-gray-800 text-white rounded hover:bg-gray-900"
+        >
+          GitHub Issue
+        </button>
+
         <button
           onClick={finishTest}
           disabled={!status}

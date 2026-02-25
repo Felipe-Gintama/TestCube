@@ -21,7 +21,9 @@
     "exactOptionalPropertyTypes": true,
 
     // Dodatki
-    "skipLibCheck": true
+    "skipLibCheck": true,
+
+    "outDir": "dist"
   },
   "include": ["src"]
 }
